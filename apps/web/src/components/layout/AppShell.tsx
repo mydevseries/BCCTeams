@@ -43,6 +43,7 @@ import {
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { ProfileModal } from '../profile/ProfileModal';
 
 const useStyles = makeStyles({
   root: {
@@ -225,6 +226,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   const location = useLocation();
   const { user, logout } = useAuth();
   const [presence, setPresence] = useState<'available' | 'busy' | 'away' | 'dnd'>('available');
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const getInitials = (name?: string) => {
     if (!name) return 'BC';
@@ -374,6 +376,7 @@ export const AppShell: React.FC<AppShellProps> = ({
                 >
                   <Avatar
                     name={user?.displayName || 'User'}
+                    image={user?.avatarUrl ? { src: user.avatarUrl } : undefined}
                     initials={getInitials(user?.displayName)}
                     badge={{ status: presenceStatusMap[presence].status }}
                     size={32}
@@ -417,6 +420,12 @@ export const AppShell: React.FC<AppShellProps> = ({
                   Away
                 </MenuItem>
                 <Divider />
+                <MenuItem
+                  icon={<PersonRegular />}
+                  onClick={() => setIsProfileModalOpen(true)}
+                >
+                  Edit profile
+                </MenuItem>
                 <MenuItem icon={<SettingsRegular />} onClick={() => navigate('/settings')}>
                   Settings
                 </MenuItem>
@@ -504,6 +513,10 @@ export const AppShell: React.FC<AppShellProps> = ({
         {/* 4. MAIN PANE */}
         <main className={styles.mainPane} role="main">
           <Outlet />
+          <ProfileModal
+            open={isProfileModalOpen}
+            onOpenChange={setIsProfileModalOpen}
+          />
         </main>
       </div>
     </div>

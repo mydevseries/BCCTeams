@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import * as express from 'express';
+import * as path from 'path';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -12,6 +14,10 @@ async function bootstrap() {
     origin: process.env.WEB_URL || 'http://localhost:5173',
     credentials: true,
   });
+
+  // Serve uploaded files (e.g. avatars)
+  const uploadsDir = path.join(process.cwd(), 'uploads');
+  app.use('/uploads', express.static(uploadsDir));
 
   app.useGlobalPipes(
     new ValidationPipe({
