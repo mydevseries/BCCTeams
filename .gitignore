@@ -20,6 +20,8 @@ pnpm-debug.log*
 # Test coverage
 coverage/
 .nyc_output/
+test-results/
+playwright-report/
 
 # Environment files
 .env
@@ -42,4 +44,5 @@ Thumbs.db
 .cache/
 .parcel-cache/
 .turbo/
+.data/
 

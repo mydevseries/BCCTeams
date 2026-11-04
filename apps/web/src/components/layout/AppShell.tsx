@@ -42,6 +42,7 @@ import {
   WeatherSunnyRegular,
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
 
 const useStyles = makeStyles({
   root: {
@@ -222,7 +223,17 @@ export const AppShell: React.FC<AppShellProps> = ({
   const styles = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
   const [presence, setPresence] = useState<'available' | 'busy' | 'away' | 'dnd'>('available');
+
+  const getInitials = (name?: string) => {
+    if (!name) return 'BC';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  };
 
   const navItems = [
     {
@@ -362,8 +373,8 @@ export const AppShell: React.FC<AppShellProps> = ({
                   aria-label="User Profile"
                 >
                   <Avatar
-                    name="Lead Engineer"
-                    initials="LE"
+                    name={user?.displayName || 'User'}
+                    initials={getInitials(user?.displayName)}
                     badge={{ status: presenceStatusMap[presence].status }}
                     size={32}
                   />
@@ -374,10 +385,10 @@ export const AppShell: React.FC<AppShellProps> = ({
               <MenuList>
                 <div style={{ padding: '8px 12px' }}>
                   <Body1 block style={{ fontWeight: 'bold' }}>
-                    Lead Engineer
+                    {user?.displayName || 'User'}
                   </Body1>
                   <Caption1 block style={{ color: tokens.colorNeutralForeground3 }}>
-                    lead.engineer@bccteams.local
+                    {user?.email || 'user@bccteams.local'}
                   </Caption1>
                 </div>
                 <Divider />
@@ -409,7 +420,13 @@ export const AppShell: React.FC<AppShellProps> = ({
                 <MenuItem icon={<SettingsRegular />} onClick={() => navigate('/settings')}>
                   Settings
                 </MenuItem>
-                <MenuItem icon={<SignOutRegular />} onClick={() => navigate('/signin')}>
+                <MenuItem
+                  icon={<SignOutRegular />}
+                  onClick={async () => {
+                    await logout();
+                    navigate('/signin');
+                  }}
+                >
                   Sign out
                 </MenuItem>
               </MenuList>

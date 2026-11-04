@@ -53,7 +53,19 @@ BCC Teams is BCC's internal collaboration platform: unified chat, teams, channel
 ## Infrastructure & Local Dev Services
 
 Defined in `docker-compose.yml`:
-1. **PostgreSQL 16**: Port 5432 (default db `bccteams`).
+1. **PostgreSQL**: Local port 5433 / 5432 (default db `bccteams`).
 2. **Redis 7**: Port 6379 (caching, presence heartbeats, Socket.IO adapter).
 3. **SeaweedFS**: S3-compatible object store (Ports 8333, 9333, 8888).
 4. **LiveKit Server**: Self-hosted WebRTC SFU (Ports 7880, 7881, 7882).
+
+---
+
+## Security & Authentication (F-001)
+
+- **Password Storage**: Hashed via `bcrypt` with work factor 10.
+- **Token Model**: Dual-token architecture:
+  - **Access Token**: Short-lived (15 minutes), signed with `JWT_SECRET`, containing `userId`, `email`, and `role`.
+  - **Refresh Token**: Long-lived (7 days), hashed with SHA-256 before storing in PostgreSQL `RefreshToken` table.
+- **Password Reset**: Cryptographically random 32-byte tokens, hashed with SHA-256 in PostgreSQL `PasswordResetToken` table, expiring after 60 minutes. All existing sessions are revoked upon password reset.
+- **Client Route Protection**: `<ProtectedRoute>` wrapping authenticated routes, automatically redirecting expired or missing tokens to `/signin`.
+

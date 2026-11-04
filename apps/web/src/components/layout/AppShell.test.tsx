@@ -3,15 +3,18 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { FluentProvider } from '@fluentui/react-components';
 import { bccLightTheme } from '../../theme/brand';
+import { AuthProvider } from '../../auth/AuthContext';
 import { AppShell } from './AppShell';
 
 describe('AppShell Layout', () => {
   it('renders top bar with BCC Teams branding', () => {
     render(
       <FluentProvider theme={bccLightTheme}>
-        <MemoryRouter initialEntries={['/chat']}>
-          <AppShell currentTheme="light" onThemeChange={vi.fn()} />
-        </MemoryRouter>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/chat']}>
+            <AppShell currentTheme="light" onThemeChange={vi.fn()} />
+          </MemoryRouter>
+        </AuthProvider>
       </FluentProvider>
     );
 
@@ -22,9 +25,11 @@ describe('AppShell Layout', () => {
   it('renders all left app bar navigation items', () => {
     render(
       <FluentProvider theme={bccLightTheme}>
-        <MemoryRouter initialEntries={['/chat']}>
-          <AppShell currentTheme="light" onThemeChange={vi.fn()} />
-        </MemoryRouter>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/chat']}>
+            <AppShell currentTheme="light" onThemeChange={vi.fn()} />
+          </MemoryRouter>
+        </AuthProvider>
       </FluentProvider>
     );
 

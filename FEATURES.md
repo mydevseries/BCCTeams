@@ -8,7 +8,7 @@ Feature IDs are used with /build-feature <id>.
 ## Phase 1 — Foundation
 | ID | Feature | Status |
 |---|---|---|
-| F-001 | Sign up, sign in, sign out, password reset | Todo |
+| F-001 | Sign up, sign in, sign out, password reset | Verified |
 | F-002 | User profile: name, photo, job title, department, phone | Todo |
 | F-003 | Organization directory: browse and search all users | Todo |
 | F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | Todo |
