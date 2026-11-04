@@ -5,7 +5,7 @@ description: Create the BCC Teams monorepo skeleton and local dev environment
 2. Write an implementation plan and wait for my approval.
 3. Create the pnpm + Turborepo monorepo with apps/web, apps/api and packages/shared
    (shared TypeScript types).
-4. Create docker-compose.yml with PostgreSQL, Redis, MinIO and LiveKit, plus
+4. Create docker-compose.yml with PostgreSQL, Redis, SeaweedFS and LiveKit, plus
    .env.example.
 5. apps/api: NestJS app with Prisma connected to Postgres, a health endpoint, and
    Socket.IO gateway.

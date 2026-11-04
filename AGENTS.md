@@ -11,12 +11,12 @@ open-source libraries.
   + Fluent System Icons (@fluentui/react-icons)
 - apps/api: Node.js + NestJS + TypeScript, REST + WebSocket (Socket.IO)
 - Database: PostgreSQL with Prisma ORM. Cache/pub-sub/presence: Redis
-- Files: MinIO (S3-compatible)
+- Files: SeaweedFS (S3-compatible, Apache-2.0)
 - Meetings and calls: LiveKit (self-hosted) + livekit-client / @livekit/components-react
 - Search: PostgreSQL full-text search (Meilisearch later if needed)
 - Auth: email + password with JWT, then Microsoft Entra ID / Google SSO via OIDC
 - Desktop (later): Tauri wrapping apps/web. Mobile (later): Expo React Native
-- Local dev: docker-compose for Postgres, Redis, MinIO, LiveKit
+- Local dev: docker-compose for Postgres, Redis, SeaweedFS, LiveKit
 
 ## Key documents
 - FEATURES.md — every feature, its status and acceptance criteria

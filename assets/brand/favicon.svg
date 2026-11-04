@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="favBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#149AA7"/>
+      <stop offset="50%" stop-color="#0E7C86"/>
+      <stop offset="100%" stop-color="#07535B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- High-contrast badge for browser tabs -->
+  <rect x="16" y="16" width="480" height="480" rx="108" ry="108" fill="url(#favBg)"/>
+
+  <!-- Accent Chat Bubble -->
+  <path d="M 310 135 
+           C 310 114, 328 98, 352 98 
+           C 376 98, 395 114, 395 135 
+           C 395 152, 382 166, 365 170 
+           L 370 186 
+           L 352 172 
+           C 328 172, 310 156, 310 135 Z" 
+        fill="#4FD1C5"/>
+
+  <!-- Main Speech Bubble -->
+  <path d="M 160 140 
+           C 160 102, 190 74, 235 74 
+           C 280 74, 310 102, 310 140 
+           C 310 174, 282 201, 240 205 
+           L 218 226 
+           C 214 230, 208 227, 210 221 
+           L 215 204 
+           C 182 198, 160 172, 160 140 Z" 
+        fill="#FFFFFF"/>
+
+  <!-- 3 Dots inside main bubble -->
+  <circle cx="202" cy="140" r="10" fill="#0E7C86"/>
+  <circle cx="235" cy="140" r="10" fill="#0E7C86"/>
+  <circle cx="268" cy="140" r="10" fill="#0E7C86"/>
+
+  <!-- Typography "BCC" -->
+  <text x="256" y="380"
+        text-anchor="middle"
+        fill="#FFFFFF"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        font-weight="900"
+        font-size="152"
+        letter-spacing="4">BCC</text>
+</svg>
+
