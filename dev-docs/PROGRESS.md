@@ -35,15 +35,16 @@ Last Updated: 2026-11-04
 | ID | Feature | Branch | Status | Notes / Verification |
 |---|---|---|---|---|
 | F-001 | Sign up, sign in, sign out, password reset | `feature/F-001` | **Verified** | 6 Jest unit tests, 6 Vitest component tests, 5 Playwright E2E tests passing 100%. Browser check complete. |
-| F-002 | User profile: name, photo, job title, department, phone | `feature/F-002` | **Next Up** | Profile view/edit card, avatar upload via SeaweedFS S3, persistence in PostgreSQL. |
+| F-002 | User profile: name, photo, job title, department, phone | `feature/F-002` | **Verified** | 8 Jest unit tests, 2 Vitest component tests, 3 Playwright E2E tests passing 100%. Browser check complete. |
+| F-003 | Organization directory: browse and search all users | `feature/F-003` | **Next Up** | Browse, real-time search (<300ms) by name, job title, department, virtualized list. |
 
 ---
 
 ## Active Work
 
-- **Current Step:** Complete F-001 & Merge to master; Start F-002
-- **Active Branch:** `feature/F-001` (merging to `master`)
-- **Next Up:** Feature F-002: User profile: name, photo, job title, department, phone
+- **Current Step:** Complete F-002 & Merge to master; Start F-003
+- **Active Branch:** `feature/F-002` (merging to `master`)
+- **Next Up:** Feature F-003: Organization directory: browse and search all users
 
 ---
 
@@ -52,3 +53,4 @@ Last Updated: 2026-11-04
 - Created original BCC Teams brand identity, logos, and illustration suite in BCC Teal `#0E7C86`.
 - Recorded technical decisions replacing Microsoft proprietary products with open-source equivalents.
 - **F-001 (User Authentication):** Implemented NestJS `AuthModule` (bcrypt, JWT access/refresh tokens, SHA-256 password reset tokens, token revocation), React Fluent UI authentication views (`SignInView`, `SignUpView`, `ForgotPasswordView`, `ResetPasswordView`), route protection with `ProtectedRoute`, and automated Playwright E2E tests.
+- **F-002 (User Profile):** Implemented NestJS `UsersModule` (`UsersService`, `UsersController`), profile view/edit modal (`ProfileModal`), colleague contact card (`MemberProfileCard`), avatar photo upload and removal with initial fallback, immediate PostgreSQL persistence, and automated Playwright E2E tests.

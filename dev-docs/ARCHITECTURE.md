@@ -69,3 +69,16 @@ Defined in `docker-compose.yml`:
 - **Password Reset**: Cryptographically random 32-byte tokens, hashed with SHA-256 in PostgreSQL `PasswordResetToken` table, expiring after 60 minutes. All existing sessions are revoked upon password reset.
 - **Client Route Protection**: `<ProtectedRoute>` wrapping authenticated routes, automatically redirecting expired or missing tokens to `/signin`.
 
+---
+
+## User Profile & Directory Architecture (F-002)
+
+- **Backend Module**: `UsersModule` exposing REST endpoints for profile retrieval (`/api/users/me`), profile updates (`PATCH /api/users/me`), photo management (`POST/DELETE /api/users/me/avatar`), and member inspection (`/api/users/:id`).
+- **Storage Strategy**:
+  - Image uploads (PNG/JPEG/WebP up to 5MB) processed via Multer, stored in `/uploads/avatars/` and served statically, with object storage compatibility for SeaweedFS S3.
+  - Removing a photo clears `avatarUrl` in PostgreSQL, reverting client components to deterministic initials avatars.
+- **Client Components**:
+  - `ProfileModal`: Dialog using Fluent UI v9 form controls (`Field`, `Input`, `Avatar`, `Button`) with live feedback.
+  - `MemberProfileCard`: Dialog displaying colleague avatar, presence badge, contact details, local time calculation, and direct action triggers (Chat, Call, Email).
+
+

@@ -2,6 +2,18 @@
 ## [Unreleased]
 
 ### Added
+- **Feature F-002: User Profile**
+  - Backend NestJS `UsersModule`:
+    - `UsersService` & `UsersController` for profile inspection, updating, avatar upload and deletion.
+    - Endpoints: `GET /api/users/me`, `PATCH /api/users/me`, `POST /api/users/me/avatar`, `DELETE /api/users/me/avatar`, `GET /api/users/:id`.
+    - Unit tests in `users.service.spec.ts` passing (8 tests).
+  - Frontend React + Fluent UI v9:
+    - `ProfileModal`: view and update full profile card (name, job title, department, phone, email, avatar).
+    - Avatar upload support (PNG/JPEG/WebP up to 5MB) and one-click photo removal reverting to initials.
+    - `MemberProfileCard`: modal card for colleagues displaying contact info, department, local time, and presence badge.
+    - Component unit tests in `ProfileModal.test.tsx` and `MemberProfileCard.test.tsx` passing.
+    - End-to-end test suite in `tests/e2e/f002-profile.spec.ts` verifying all 5 acceptance criteria in Chromium/Chrome.
+
 - **Feature F-001: User Authentication**
   - Backend NestJS `AuthModule`:
     - Registration with password hashing (bcrypt, 10 rounds).

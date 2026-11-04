@@ -49,6 +49,21 @@ export interface HealthStatus {
   };
 }
 
+export interface UpdateProfileDto {
+  displayName?: string;
+  jobTitle?: string | null;
+  department?: string | null;
+  phoneNumber?: string | null;
+}
+
+export interface MemberProfile extends UserProfile {
+  presence?: {
+    status: PresenceStatus;
+    statusMessage?: string | null;
+  } | null;
+  localTime?: string;
+}
+
 export interface SocketEvents {
   'presence:update': PresenceState;
   'chat:message': unknown;
