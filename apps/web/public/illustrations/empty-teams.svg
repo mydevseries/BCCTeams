@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <defs>
+    <linearGradient id="teamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#149AA7"/>
+      <stop offset="100%" stop-color="#0E7C86"/>
+    </linearGradient>
+  </defs>
+  <circle cx="160" cy="120" r="95" fill="#F0FDFA"/>
+  <!-- Connecting network lines -->
+  <path d="M 120 130 L 160 90 L 200 130 Z" stroke="#99F6E4" stroke-width="3" stroke-dasharray="6,6" fill="none"/>
+  
+  <!-- Person 1 (Center) -->
+  <g transform="translate(160, 85)">
+    <circle cx="0" cy="0" r="22" fill="url(#teamGrad)"/>
+    <path d="M -16 28 C -16 16, 16 16, 16 28 L 16 34 L -16 34 Z" fill="url(#teamGrad)"/>
+    <!-- Initials -->
+    <text x="0" y="6" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="bold" font-size="14">BC</text>
+  </g>
+
+  <!-- Person 2 (Left) -->
+  <g transform="translate(115, 140)">
+    <circle cx="0" cy="0" r="18" fill="#2DD4BF"/>
+    <path d="M -13 22 C -13 13, 13 13, 13 22 L 13 26 L -13 26 Z" fill="#2DD4BF"/>
+    <text x="0" y="5" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="bold" font-size="11">TL</text>
+  </g>
+
+  <!-- Person 3 (Right) -->
+  <g transform="translate(205, 140)">
+    <circle cx="0" cy="0" r="18" fill="#0D9488"/>
+    <path d="M -13 22 C -13 13, 13 13, 13 22 L 13 26 L -13 26 Z" fill="#0D9488"/>
+    <text x="0" y="5" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="bold" font-size="11">DEV</text>
+  </g>
+</svg>

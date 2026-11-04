@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
+  <circle cx="160" cy="120" r="90" fill="#F0FDFA"/>
+  <!-- Magnifying glass with questions -->
+  <g transform="translate(150, 110)">
+    <circle cx="0" cy="0" r="32" fill="none" stroke="#0E7C86" stroke-width="6"/>
+    <line x1="24" y1="24" x2="48" y2="48" stroke="#0E7C86" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="22" fill="#E6FFFA"/>
+    <text x="0" y="8" text-anchor="middle" fill="#0E7C86" font-family="sans-serif" font-weight="900" font-size="24">?</text>
+  </g>
+</svg>

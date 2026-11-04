@@ -1,0 +1,96 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum PresenceStatus {
+  AVAILABLE
+  BUSY
+  DO_NOT_DISTURB
+  BE_RIGHT_BACK
+  AWAY
+  OFFLINE
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  displayName  String
+  avatarUrl    String?
+  jobTitle     String?
+  department   String?
+  phoneNumber  String?
+  role         Role      @default(MEMBER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  refreshTokens       RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+  presence            Presence?
+  settings            UserSettings?
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Presence {
+  userId          String         @id
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          PresenceStatus @default(AVAILABLE)
+  statusMessage   String?
+  statusExpiresAt DateTime?
+  lastActiveAt    DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model UserSettings {
+  userId             String   @id
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme              String   @default("light") // light | dark | high-contrast
+  language           String   @default("en")
+  notifyBanners      Boolean  @default(true)
+  notifySounds       Boolean  @default(true)
+  notifyEmailDigest  Boolean  @default(true)
+  workingHoursStart  String   @default("09:00")
+  workingHoursEnd    String   @default("17:00")
+  workLocation       String   @default("Office") // Office | Remote
+  readReceipts       Boolean  @default(true)
+  chatDensity        String   @default("comfortable") // comfortable | compact
+  enterToSend        Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+}

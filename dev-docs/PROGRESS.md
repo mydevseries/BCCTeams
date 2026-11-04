@@ -13,8 +13,8 @@ Last Updated: 2026-11-04
 | **Phase A: Project Structure** | Root structure cleanup, git, rules | **Done** | Agent pack moved to root, git initialized |
 | **Phase B: Brand Assets** | Logo, mono, favicons, illustrations | **Done** | Teal palette `#0E7C86`, original badge & illustrations |
 | **Phase C: Feature Expansion** | Complete catalog + 4-8 AC per P1/P2 | **Done** | Expanded across 13 phases, decisions documented |
-| **Project Setup** | Monorepo, Docker Compose, NestJS, Vite shell | **In Progress** | Following `.agents/workflows/setup-project.md` |
-| **Phase 1: Foundation** | F-001 through F-009 | **Next** | Starting with F-001 |
+| **Project Setup** | Monorepo, Docker Compose, NestJS, Vite shell | **Done** | Built monorepo, AppShell, Fluent theme, verified with unit tests & screenshot |
+| **Phase 1: Foundation** | F-001 through F-009 | **In Progress** | Starting F-001 on `feature/F-001` |
 | **Phase 2: Chat** | C-001 through C-033 | Todo | |
 | **Phase 3: Teams & Channels** | T-001 through T-020 | Todo | |
 | **Phase 4: Activity & Search** | A-001 through A-009 | Todo | |
