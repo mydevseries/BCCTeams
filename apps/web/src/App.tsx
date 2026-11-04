@@ -11,6 +11,7 @@ import { SignInView } from './views/auth/SignInView';
 import { SignUpView } from './views/auth/SignUpView';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
+import { DirectoryView } from './views/DirectoryView';
 
 export const App: React.FC = () => {
   const [themeName, setThemeName] = useState<'light' | 'dark' | 'high-contrast'>('light');
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
             >
               <Route index element={<Navigate to="/chat" replace />} />
               <Route path="chat" element={<ChatView />} />
+              <Route path="directory" element={<DirectoryView />} />
               <Route
                 path="activity"
                 element={

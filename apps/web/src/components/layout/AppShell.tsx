@@ -38,6 +38,8 @@ import {
   SettingsRegular,
   SignOutRegular,
   PersonRegular,
+  PeopleSearchRegular,
+  PeopleSearchFilled,
   WeatherMoonRegular,
   WeatherSunnyRegular,
 } from '@fluentui/react-icons';
@@ -287,6 +289,13 @@ export const AppShell: React.FC<AppShellProps> = ({
       iconRegular: <AppsRegular fontSize={22} />,
       iconFilled: <AppsFilled fontSize={22} />,
     },
+    {
+      id: 'directory',
+      label: 'Directory',
+      path: '/directory',
+      iconRegular: <PeopleSearchRegular fontSize={22} />,
+      iconFilled: <PeopleSearchFilled fontSize={22} />,
+    },
   ];
 
   const currentTab = navItems.find((item) =>
@@ -348,6 +357,11 @@ export const AppShell: React.FC<AppShellProps> = ({
             appearance="filled-darker"
             size="medium"
             aria-label="Global search"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                navigate('/directory');
+              }
+            }}
           />
         </div>
 

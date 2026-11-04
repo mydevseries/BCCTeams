@@ -149,6 +149,64 @@ export class UsersService {
     };
   }
 
+  async getDirectory(
+    query?: string,
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{ users: MemberProfile[]; total: number; page: number; totalPages: number }> {
+    const pageNum = Math.max(1, Number(page) || 1);
+    const take = Math.min(100, Math.max(1, Number(limit) || 20));
+    const skip = (pageNum - 1) * take;
+
+    const trimmed = query?.trim();
+    const where: any = {
+      isActive: true,
+      ...(trimmed && {
+        OR: [
+          { displayName: { contains: trimmed, mode: 'insensitive' } },
+          { email: { contains: trimmed, mode: 'insensitive' } },
+          { jobTitle: { contains: trimmed, mode: 'insensitive' } },
+          { department: { contains: trimmed, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const [total, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        include: { presence: true },
+        orderBy: { displayName: 'asc' },
+        skip,
+        take,
+      }),
+    ]);
+
+    const now = new Date();
+    const localTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    const memberProfiles: MemberProfile[] = users.map((u) => ({
+      ...this.sanitizeUser(u),
+      presence: u.presence
+        ? {
+            status: u.presence.status,
+            statusMessage: u.presence.statusMessage,
+          }
+        : {
+            status: 'AVAILABLE',
+            statusMessage: null,
+          },
+      localTime,
+    }));
+
+    return {
+      users: memberProfiles,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / take) || 1,
+    };
+  }
+
   private sanitizeUser(user: {
     id: string;
     email: string;

@@ -14,7 +14,7 @@ Last Updated: 2026-11-04
 | **Phase B: Brand Assets** | Logo, mono, favicons, illustrations | **Done** | Teal palette `#0E7C86`, original badge & illustrations |
 | **Phase C: Feature Expansion** | Complete catalog + 4-8 AC per P1/P2 | **Done** | Expanded across 13 phases, decisions documented |
 | **Project Setup** | Monorepo, Docker Compose, NestJS, Vite shell | **Done** | Built monorepo, AppShell, Fluent theme, verified with unit tests & screenshot |
-| **Phase 1: Foundation** | F-001 through F-009 | **In Progress** | F-001 Verified. Starting F-002 |
+| **Phase 1: Foundation** | F-001 through F-009 | **In Progress** | F-001, F-002, F-003 Verified. Starting F-004 |
 | **Phase 2: Chat** | C-001 through C-033 | Todo | |
 | **Phase 3: Teams & Channels** | T-001 through T-020 | Todo | |
 | **Phase 4: Activity & Search** | A-001 through A-009 | Todo | |
@@ -34,17 +34,18 @@ Last Updated: 2026-11-04
 
 | ID | Feature | Branch | Status | Notes / Verification |
 |---|---|---|---|---|
-| F-001 | Sign up, sign in, sign out, password reset | `feature/F-001` | **Verified** | 6 Jest unit tests, 6 Vitest component tests, 5 Playwright E2E tests passing 100%. Browser check complete. |
-| F-002 | User profile: name, photo, job title, department, phone | `feature/F-002` | **Verified** | 8 Jest unit tests, 2 Vitest component tests, 3 Playwright E2E tests passing 100%. Browser check complete. |
-| F-003 | Organization directory: browse and search all users | `feature/F-003` | **Next Up** | Browse, real-time search (<300ms) by name, job title, department, virtualized list. |
+| F-001 | Sign up, sign in, sign out, password reset | `feature/F-001` | **Verified** | 6 Jest unit tests, 6 Vitest component tests, 5 Playwright E2E tests passing 100%. Merged to master. |
+| F-002 | User profile: name, photo, job title, department, phone | `feature/F-002` | **Verified** | 8 Jest unit tests, 2 Vitest component tests, 3 Playwright E2E tests passing 100%. Merged to master. |
+| F-003 | Organization directory: browse and search all users | `feature/F-003` | **Verified** | 3 Jest unit tests, 1 Vitest component test, 3 Playwright E2E tests passing 100%. Merged to master. |
+| F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | `feature/F-004` | **In Progress** | Real-time presence via Socket.IO, status selection, automatic Away, custom message with expiry. |
 
 ---
 
 ## Active Work
 
-- **Current Step:** Complete F-002 & Merge to master; Start F-003
-- **Active Branch:** `feature/F-002` (merging to `master`)
-- **Next Up:** Feature F-003: Organization directory: browse and search all users
+- **Current Step:** Completed F-003, merging to master; starting F-004 (Presence System)
+- **Active Branch:** `feature/F-004`
+- **Next Up:** Feature F-005: Settings (theme, language, notification preferences)
 
 ---
 
@@ -54,3 +55,4 @@ Last Updated: 2026-11-04
 - Recorded technical decisions replacing Microsoft proprietary products with open-source equivalents.
 - **F-001 (User Authentication):** Implemented NestJS `AuthModule` (bcrypt, JWT access/refresh tokens, SHA-256 password reset tokens, token revocation), React Fluent UI authentication views (`SignInView`, `SignUpView`, `ForgotPasswordView`, `ResetPasswordView`), route protection with `ProtectedRoute`, and automated Playwright E2E tests.
 - **F-002 (User Profile):** Implemented NestJS `UsersModule` (`UsersService`, `UsersController`), profile view/edit modal (`ProfileModal`), colleague contact card (`MemberProfileCard`), avatar photo upload and removal with initial fallback, immediate PostgreSQL persistence, and automated Playwright E2E tests.
+- **F-003 (Organization Directory):** Implemented `GET /api/users` directory endpoint with alphabetical sorting, pagination, multi-attribute real-time search, inactive account exclusion, Fluent UI `DirectoryView`, colleague member cards with contact profile modal integration, and automated Playwright E2E tests.

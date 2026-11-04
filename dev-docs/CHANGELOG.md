@@ -2,6 +2,19 @@
 ## [Unreleased]
 
 ### Added
+- **Feature F-003: Organization Directory**
+  - Backend NestJS `UsersModule` expansion:
+    - Added `getDirectory` service method with alphabetical ordering (`displayName: 'asc'`), pagination (`page`, `limit`), and multi-attribute search across name, email, job title, and department.
+    - Excluded inactive/suspended accounts (`isActive: false`) from standard directory results.
+    - Added `GET /api/users` endpoint returning user profiles with presence and local time.
+    - 3 unit tests in `users.service.spec.ts` passing.
+  - Frontend React + Fluent UI v9:
+    - Built `DirectoryView` component with responsive card grid, debounced (<150ms) search input, active members count badge, and empty state illustrations.
+    - Integrated colleague cards with `MemberProfileCard` modal for contact details and quick actions (`Chat`, `Call`, `Email`).
+    - Added Directory route in `App.tsx` and navigation button in left app bar (`AppShell.tsx`).
+    - Component unit test in `DirectoryView.test.tsx` passing.
+    - End-to-end test suite in `tests/e2e/f003-directory.spec.ts` verifying all 4 acceptance criteria in Chromium/Chrome.
+
 - **Feature F-002: User Profile**
   - Backend NestJS `UsersModule`:
     - `UsersService` & `UsersController` for profile inspection, updating, avatar upload and deletion.
@@ -29,4 +42,3 @@
     - User avatar and profile dropdown menu in `AppShell` with Sign Out capability.
     - Component unit tests in `AuthViews.test.tsx` and `AppShell.test.tsx` passing.
     - End-to-end test suite in `tests/e2e/f001-auth.spec.ts` verifying all 6 acceptance criteria in Chromium/Chrome.
-

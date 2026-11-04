@@ -40,5 +40,6 @@ describe('AppShell Layout', () => {
     expect(screen.getByRole('button', { name: /^Calls$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Files$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Apps$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Directory$/i })).toBeInTheDocument();
   });
 });

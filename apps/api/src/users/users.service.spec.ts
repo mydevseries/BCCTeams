@@ -30,6 +30,8 @@ describe('UsersService', () => {
       user: {
         findUnique: jest.fn(),
         update: jest.fn(),
+        findMany: jest.fn(),
+        count: jest.fn(),
       },
     };
 
@@ -154,6 +156,63 @@ describe('UsersService', () => {
       expect(result.displayName).toBe('Sarah Connor');
       expect(result.presence?.status).toBe('AVAILABLE');
       expect(result.localTime).toBeDefined();
+    });
+  });
+
+  describe('getDirectory', () => {
+    it('lists active users alphabetically', async () => {
+      mockPrisma.user.count.mockResolvedValue(2);
+      mockPrisma.user.findMany.mockResolvedValue([
+        { ...mockUser, id: 'user-1', displayName: 'Alice Adams' },
+        { ...mockUser, id: 'user-2', displayName: 'Bob Brown' },
+      ]);
+
+      const result = await service.getDirectory();
+      expect(result.users.length).toBe(2);
+      expect(result.users[0].displayName).toBe('Alice Adams');
+      expect(result.users[1].displayName).toBe('Bob Brown');
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ isActive: true }),
+          orderBy: { displayName: 'asc' },
+        })
+      );
+    });
+
+    it('filters users by search query across name, email, title, department', async () => {
+      mockPrisma.user.count.mockResolvedValue(1);
+      mockPrisma.user.findMany.mockResolvedValue([mockUser]);
+
+      const result = await service.getDirectory('security');
+      expect(result.users.length).toBe(1);
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            isActive: true,
+            OR: expect.arrayContaining([
+              { displayName: { contains: 'security', mode: 'insensitive' } },
+              { email: { contains: 'security', mode: 'insensitive' } },
+              { jobTitle: { contains: 'security', mode: 'insensitive' } },
+              { department: { contains: 'security', mode: 'insensitive' } },
+            ]),
+          }),
+        })
+      );
+    });
+
+    it('supports pagination with page and limit', async () => {
+      mockPrisma.user.count.mockResolvedValue(50);
+      mockPrisma.user.findMany.mockResolvedValue([mockUser]);
+
+      const result = await service.getDirectory('', 2, 10);
+      expect(result.page).toBe(2);
+      expect(result.totalPages).toBe(5);
+      expect(mockPrisma.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 10,
+          take: 10,
+        })
+      );
     });
   });
 });

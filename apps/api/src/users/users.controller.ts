@@ -11,6 +11,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -77,6 +78,15 @@ export class UsersController {
   @Delete('me/avatar')
   async removeAvatar(@Req() req: AuthenticatedRequest): Promise<UserProfile> {
     return this.usersService.removeAvatar(req.user.id);
+  }
+
+  @Get()
+  async getDirectory(
+    @Query('query') query?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number
+  ): Promise<{ users: MemberProfile[]; total: number; page: number; totalPages: number }> {
+    return this.usersService.getDirectory(query, page, limit);
   }
 
   @Get(':id')
