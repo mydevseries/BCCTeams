@@ -22,7 +22,7 @@ export class ChatService {
 
   async getUserConversations(userId: string): Promise<ConversationSummary[]> {
     const userParticipants = await this.prisma.conversationParticipant.findMany({
-      where: { userId },
+      where: { userId, isHidden: false },
       include: {
         conversation: {
           include: {
@@ -65,11 +65,10 @@ export class ChatService {
           },
         },
       },
-      orderBy: {
-        conversation: {
-          updatedAt: 'desc',
-        },
-      },
+      orderBy: [
+        { isPinned: 'desc' },
+        { conversation: { updatedAt: 'desc' } },
+      ],
     });
 
     // Extract all unique participant user IDs to batch-fetch presence
@@ -81,66 +80,86 @@ export class ChatService {
     }
     const presenceMap = await this.presenceService.getBatchPresence(Array.from(allUserIds));
 
+    // Calculate unread count for each conversation
+    const unreadCounts = await Promise.all(
+      userParticipants.map(async (up) => {
+        return this.prisma.message.count({
+          where: {
+            conversationId: up.conversationId,
+            createdAt: {
+              gt: up.lastReadAt,
+              gte: up.visibleFrom,
+            },
+            senderId: { not: userId },
+          },
+        });
+      }),
+    );
+
     return userParticipants
       .filter((up) => up.conversation)
-      .map((up) => {
+      .map((up, i) => {
         const conv = up.conversation;
         const participants: ChatParticipant[] = (conv.participants || []).map((p) => {
-        const pres = presenceMap[p.userId];
+          const pres = presenceMap[p.userId];
+          return {
+            id: p.id,
+            conversationId: p.conversationId,
+            userId: p.userId,
+            role: p.role,
+            joinedAt: p.joinedAt,
+            lastReadAt: p.lastReadAt,
+            isPinned: p.isPinned,
+            isMuted: p.isMuted,
+            user: {
+              ...p.user,
+              presence: pres
+                ? {
+                    status: pres.status,
+                    statusMessage: pres.statusMessage,
+                    statusExpiresAt: pres.statusExpiresAt,
+                  }
+                : null,
+            },
+          };
+        });
+
+        const otherParticipant =
+          conv.type === 'DIRECT'
+            ? participants.find((p) => p.userId !== userId)?.user
+            : undefined;
+
+        const lastMessage: ChatMessage | null = conv.messages[0]
+          ? {
+              id: conv.messages[0].id,
+              conversationId: conv.messages[0].conversationId,
+              senderId: conv.messages[0].senderId,
+              content: conv.messages[0].content,
+              isEdited: conv.messages[0].isEdited,
+              isDeleted: conv.messages[0].isDeleted,
+              isSystem: conv.messages[0].isSystem,
+              systemAction: conv.messages[0].systemAction,
+              createdAt: conv.messages[0].createdAt,
+              updatedAt: conv.messages[0].updatedAt,
+              sender: conv.messages[0].sender,
+            }
+          : null;
+
         return {
-          id: p.id,
-          conversationId: p.conversationId,
-          userId: p.userId,
-          role: p.role,
-          joinedAt: p.joinedAt,
-          lastReadAt: p.lastReadAt,
-          isPinned: p.isPinned,
-          isMuted: p.isMuted,
-          user: {
-            ...p.user,
-            presence: pres
-              ? {
-                  status: pres.status,
-                  statusMessage: pres.statusMessage,
-                  statusExpiresAt: pres.statusExpiresAt,
-                }
-              : null,
-          },
+          id: conv.id,
+          type: conv.type,
+          title: conv.title,
+          createdAt: conv.createdAt,
+          updatedAt: conv.updatedAt,
+          participants,
+          lastMessage,
+          unreadCount: unreadCounts[i],
+          isPinned: up.isPinned,
+          isMuted: up.isMuted,
+          isHidden: up.isHidden,
+          otherParticipant,
         };
       });
-
-      const otherParticipant =
-        conv.type === 'DIRECT'
-          ? participants.find((p) => p.userId !== userId)?.user
-          : undefined;
-
-      const lastMessage: ChatMessage | null = conv.messages[0]
-        ? {
-            id: conv.messages[0].id,
-            conversationId: conv.messages[0].conversationId,
-            senderId: conv.messages[0].senderId,
-            content: conv.messages[0].content,
-            isEdited: conv.messages[0].isEdited,
-            isDeleted: conv.messages[0].isDeleted,
-            isSystem: conv.messages[0].isSystem,
-            systemAction: conv.messages[0].systemAction,
-            createdAt: conv.messages[0].createdAt,
-            updatedAt: conv.messages[0].updatedAt,
-            sender: conv.messages[0].sender,
-          }
-        : null;
-
-      return {
-        id: conv.id,
-        type: conv.type,
-        title: conv.title,
-        createdAt: conv.createdAt,
-        updatedAt: conv.updatedAt,
-        participants,
-        lastMessage,
-        otherParticipant,
-      };
-    });
   }
 
   async getDirectConversation(userId: string, recipientId: string) {
@@ -869,6 +888,17 @@ export class ChatService {
       },
     });
 
+    // Unhide conversation for any participants who hid it
+    await this.prisma.conversationParticipant.updateMany({
+      where: {
+        conversationId,
+        isHidden: true,
+      },
+      data: {
+        isHidden: false,
+      },
+    });
+
     // Broadcast message to chat room and to participant user rooms
     this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', message);
 
@@ -909,6 +939,146 @@ export class ChatService {
         lastReadAt: new Date(),
       },
     });
+
+    return { success: true };
+  }
+
+  async markAsUnread(conversationId: string, userId: string) {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        lastReadAt: new Date(0),
+      },
+    });
+
+    const conversations = await this.getUserConversations(userId);
+    const summary = conversations.find((c) => c.id === conversationId);
+    if (summary) {
+      this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:conversation_updated', summary);
+    }
+
+    return { success: true };
+  }
+
+  async togglePin(conversationId: string, userId: string, isPinned?: boolean) {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const nextPin = isPinned !== undefined ? isPinned : !participant.isPinned;
+
+    await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        isPinned: nextPin,
+      },
+    });
+
+    const conversations = await this.getUserConversations(userId);
+    const summary = conversations.find((c) => c.id === conversationId);
+    if (summary) {
+      this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:conversation_updated', summary);
+    }
+
+    return { success: true, isPinned: nextPin };
+  }
+
+  async toggleMute(conversationId: string, userId: string, isMuted?: boolean) {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const nextMute = isMuted !== undefined ? isMuted : !participant.isMuted;
+
+    await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        isMuted: nextMute,
+      },
+    });
+
+    const conversations = await this.getUserConversations(userId);
+    const summary = conversations.find((c) => c.id === conversationId);
+    if (summary) {
+      this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:conversation_updated', summary);
+    }
+
+    return { success: true, isMuted: nextMute };
+  }
+
+  async hideConversation(conversationId: string, userId: string) {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+    });
+
+    if (!participant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    await this.prisma.conversationParticipant.update({
+      where: {
+        conversationId_userId: {
+          conversationId,
+          userId,
+        },
+      },
+      data: {
+        isHidden: true,
+      },
+    });
+
+    this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:conversation_hidden', { conversationId });
 
     return { success: true };
   }

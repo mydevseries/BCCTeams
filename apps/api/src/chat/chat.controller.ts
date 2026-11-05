@@ -132,4 +132,42 @@ export class ChatController {
     const user = req.user as { id: string };
     return this.chatService.markAsRead(conversationId, user.id);
   }
+
+  @Post('conversations/:id/unread')
+  async markAsUnread(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.markAsUnread(conversationId, user.id);
+  }
+
+  @Patch('conversations/:id/pin')
+  async togglePin(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Body('isPinned') isPinned?: boolean,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.togglePin(conversationId, user.id, isPinned);
+  }
+
+  @Patch('conversations/:id/mute')
+  async toggleMute(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Body('isMuted') isMuted?: boolean,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.toggleMute(conversationId, user.id, isMuted);
+  }
+
+  @Patch('conversations/:id/hide')
+  async hideConversation(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.hideConversation(conversationId, user.id);
+  }
 }

@@ -49,12 +49,14 @@ describe('ChatService (C-001)', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
         delete: jest.fn(),
         count: jest.fn(),
       },
       message: {
         findMany: jest.fn(),
         create: jest.fn(),
+        count: jest.fn(),
       },
       user: {
         findUnique: jest.fn(),
@@ -440,6 +442,140 @@ describe('ChatService (C-001)', () => {
       const res = await service.removeParticipant('group-1', 'user-1', 'user-2');
       expect(res.success).toBe(true);
       expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-2', 'chat:participant_removed', expect.anything());
+    });
+  });
+
+  describe('C-003: Chat List Management (Pin, Mute, Hide, Unread)', () => {
+    it('returns conversations with unreadCount and pin status', async () => {
+      prisma.conversationParticipant.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          conversationId: 'conv-1',
+          userId: 'user-1',
+          isPinned: true,
+          isMuted: false,
+          isHidden: false,
+          lastReadAt: new Date(Date.now() - 3600000),
+          visibleFrom: new Date(0),
+          conversation: {
+            id: 'conv-1',
+            type: 'DIRECT',
+            participants: [
+              { id: 'p1', userId: 'user-1', role: 'MEMBER', user: mockUser1 },
+              { id: 'p2', userId: 'user-2', role: 'MEMBER', user: mockUser2 },
+            ],
+            messages: [
+              {
+                id: 'm1',
+                conversationId: 'conv-1',
+                senderId: 'user-2',
+                content: 'Latest message',
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                sender: mockUser2,
+              },
+            ],
+          },
+        },
+      ]);
+      prisma.message.count.mockResolvedValue(3);
+
+      const convs = await service.getUserConversations('user-1');
+      expect(convs).toHaveLength(1);
+      expect(convs[0].isPinned).toBe(true);
+      expect(convs[0].unreadCount).toBe(3);
+    });
+
+    it('toggles pin state on a conversation', async () => {
+      prisma.conversationParticipant.findUnique.mockResolvedValue({
+        id: 'p1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
+        isPinned: false,
+      });
+      prisma.conversationParticipant.update.mockResolvedValue({
+        id: 'p1',
+        isPinned: true,
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([]);
+
+      const res = await service.togglePin('conv-1', 'user-1');
+      expect(res.success).toBe(true);
+      expect(res.isPinned).toBe(true);
+    });
+
+    it('toggles mute state on a conversation', async () => {
+      prisma.conversationParticipant.findUnique.mockResolvedValue({
+        id: 'p1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
+        isMuted: false,
+      });
+      prisma.conversationParticipant.update.mockResolvedValue({
+        id: 'p1',
+        isMuted: true,
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([]);
+
+      const res = await service.toggleMute('conv-1', 'user-1');
+      expect(res.success).toBe(true);
+      expect(res.isMuted).toBe(true);
+    });
+
+    it('hides conversation and unhides automatically upon receiving a new message', async () => {
+      prisma.conversationParticipant.findUnique.mockResolvedValue({
+        id: 'p1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
+        isHidden: false,
+      });
+      prisma.conversationParticipant.update.mockResolvedValue({
+        id: 'p1',
+        isHidden: true,
+      });
+
+      const hideRes = await service.hideConversation('conv-1', 'user-1');
+      expect(hideRes.success).toBe(true);
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-1', 'chat:conversation_hidden', { conversationId: 'conv-1' });
+
+      // When sending message, unhide updateMany is called
+      prisma.conversationParticipant.updateMany.mockResolvedValue({ count: 1 });
+      prisma.message.create.mockResolvedValue({
+        id: 'msg-new',
+        conversationId: 'conv-1',
+        senderId: 'user-2',
+        content: 'New ping',
+        sender: mockUser2,
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([{ userId: 'user-1' }, { userId: 'user-2' }]);
+
+      await service.sendMessage('conv-1', 'user-2', 'New ping');
+      expect(prisma.conversationParticipant.updateMany).toHaveBeenCalledWith({
+        where: { conversationId: 'conv-1', isHidden: true },
+        data: { isHidden: false },
+      });
+    });
+
+    it('marks conversation as unread by resetting lastReadAt', async () => {
+      prisma.conversationParticipant.findUnique.mockResolvedValue({
+        id: 'p1',
+        conversationId: 'conv-1',
+        userId: 'user-1',
+        lastReadAt: new Date(),
+      });
+      prisma.conversationParticipant.update.mockResolvedValue({
+        id: 'p1',
+        lastReadAt: new Date(0),
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([]);
+
+      const res = await service.markAsUnread('conv-1', 'user-1');
+      expect(res.success).toBe(true);
+      expect(prisma.conversationParticipant.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: { lastReadAt: new Date(0) },
+        }),
+      );
     });
   });
 });
