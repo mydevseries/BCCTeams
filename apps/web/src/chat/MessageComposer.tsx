@@ -13,6 +13,7 @@ import {
 import { useChat } from './ChatContext';
 import { FormatToolbar, FormatAction } from './FormatToolbar';
 import { InsertLinkDialog } from './InsertLinkDialog';
+import { EmojiPickerPopover } from './EmojiPickerPopover';
 
 const useStyles = makeStyles({
   container: {
@@ -216,6 +217,30 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ disabled = fal
     }, 0);
   };
 
+  const handleSelectEmoji = (emoji: string) => {
+    const el = textareaRef.current;
+    const start = el ? el.selectionStart : text.length;
+    const end = el ? el.selectionEnd : text.length;
+    const nextText = text.slice(0, start) + emoji + text.slice(end);
+    setText(nextText);
+    setTimeout(() => {
+      if (el) {
+        el.focus();
+        el.setSelectionRange(start + emoji.length, start + emoji.length);
+      }
+    }, 0);
+  };
+
+  const handleSelectGif = async (title: string, url: string) => {
+    if (disabled) return;
+    await sendMessage(`![GIF: ${title}](${url})`);
+  };
+
+  const handleSelectSticker = async (name: string, svgDataUri: string) => {
+    if (disabled) return;
+    await sendMessage(`![Sticker: ${name}](${svgDataUri})`);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     // Keyboard shortcuts
     if (e.ctrlKey || e.metaKey) {
@@ -300,6 +325,13 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ disabled = fal
                 disabled={disabled}
               />
             </Tooltip>
+
+            <EmojiPickerPopover
+              onSelectEmoji={handleSelectEmoji}
+              onSelectGif={handleSelectGif}
+              onSelectSticker={handleSelectSticker}
+              disabled={disabled}
+            />
           </div>
 
           <Tooltip

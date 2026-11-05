@@ -113,6 +113,14 @@ const useStyles = makeStyles({
   strikethrough: {
     textDecorationLine: 'line-through',
   },
+  image: {
+    maxWidth: '280px',
+    maxHeight: '220px',
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    objectFit: 'contain',
+    display: 'block',
+    ...shorthands.margin('4px', '0'),
+  },
 });
 
 interface CodeBlockProps {
@@ -159,13 +167,14 @@ const CodeBlockComponent: React.FC<CodeBlockProps> = ({ code, language }) => {
 export const renderInlineFormattedText = (text: string, styles: ReturnType<typeof useStyles>): React.ReactNode[] => {
   if (!text) return [];
 
+  // Match images: ![alt](url)
   // Match links: [text](url)
   // Inline code: `code`
   // Bold: **text**
   // Underline: <u>text</u>
   // Strikethrough: ~~text~~
   // Italic: *text* or _text_
-  const tokenRegex = /(\[(.*?)\]\((https?:\/\/[^\s)]+)\)|`([^`]+)`|\*\*(.*?)\*\*|<u>(.*?)<\/u>|~~(.*?)~~|\*([^*]+)\*|_([^_]+)_)/g;
+  const tokenRegex = /(!\[(.*?)\]\((https?:\/\/[^\s)]+|data:image\/[^\s)]+)\)|\[(.*?)\]\((https?:\/\/[^\s)]+)\)|`([^`]+)`|\*\*(.*?)\*\*|<u>(.*?)<\/u>|~~(.*?)~~|\*([^*]+)\*|_([^_]+)_)/g;
 
   const result: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -177,9 +186,32 @@ export const renderInlineFormattedText = (text: string, styles: ReturnType<typeo
       result.push(text.substring(lastIndex, match.index));
     }
 
-    const [fullMatch, , linkText, linkUrl, inlineCode, boldText, underlineText, strikeText, italicAsterisk, italicUnderscore] = match;
+    const [
+      fullMatch,
+      ,
+      imgAlt,
+      imgUrl,
+      linkText,
+      linkUrl,
+      inlineCode,
+      boldText,
+      underlineText,
+      strikeText,
+      italicAsterisk,
+      italicUnderscore,
+    ] = match;
 
-    if (linkText !== undefined && linkUrl !== undefined) {
+    if (imgAlt !== undefined && imgUrl !== undefined) {
+      result.push(
+        <img
+          key={`img-${keyIdx++}`}
+          src={imgUrl}
+          alt={imgAlt || 'image'}
+          className={styles.image}
+          loading="lazy"
+        />
+      );
+    } else if (linkText !== undefined && linkUrl !== undefined) {
       result.push(
         <a
           key={`link-${keyIdx++}`}
