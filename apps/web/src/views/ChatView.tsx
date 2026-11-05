@@ -54,6 +54,7 @@ export const ChatView: React.FC = () => {
   const {
     activeConversation,
     activeRecipient,
+    selectedRecipients,
     messages,
     isDraft,
     startDraftChat,
@@ -64,11 +65,12 @@ export const ChatView: React.FC = () => {
       {isDraft ? (
         <>
           <RecipientPicker />
-          {activeRecipient ? (
+          {selectedRecipients.length > 0 ? (
             <>
               <MessageList
                 messages={messages}
                 recipient={activeRecipient}
+                recipients={selectedRecipients}
                 isDraft={true}
               />
               <MessageComposer disabled={false} />
@@ -78,16 +80,19 @@ export const ChatView: React.FC = () => {
               <div className={styles.emptyCenter}>
                 <span className={styles.emptyTitle}>New conversation</span>
                 <span className={styles.emptySubtitle}>
-                  Search for a colleague above to start a 1:1 direct chat
+                  Search for colleagues above to start a 1:1 direct chat or a group chat
                 </span>
               </div>
               <MessageComposer disabled={true} />
             </>
           )}
         </>
-      ) : activeConversation && activeConversation.otherParticipant ? (
+      ) : activeConversation ? (
         <>
-          <ChatHeader participant={activeConversation.otherParticipant} />
+          <ChatHeader
+            conversation={activeConversation}
+            participant={activeConversation.otherParticipant}
+          />
           <MessageList
             messages={messages}
             recipient={activeConversation.otherParticipant}
@@ -98,21 +103,23 @@ export const ChatView: React.FC = () => {
       ) : (
         <div className={styles.emptyCenter}>
           <img
-            src="/illustrations/empty-chat.svg"
+            src="/assets/illustrations/chat-empty.svg"
             alt="No conversation selected"
             className={styles.emptyImg}
+            onError={(e) => {
+              (e.currentTarget as HTMLImageElement).style.display = 'none';
+            }}
           />
-          <span className={styles.emptyTitle}>Select a chat to start messaging</span>
+          <span className={styles.emptyTitle}>Welcome to Chat</span>
           <span className={styles.emptySubtitle}>
-            Choose a colleague from your conversations list on the left, or click below to start a new 1:1 chat.
+            Send direct messages or collaborate in groups with up to 250 colleagues.
           </span>
           <Button
             appearance="primary"
             icon={<ComposeRegular />}
-            onClick={() => startDraftChat()}
-            size="medium"
+            onClick={() => startDraftChat(null)}
           >
-            New Chat
+            Start a new chat
           </Button>
         </div>
       )}

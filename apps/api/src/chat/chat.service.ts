@@ -75,15 +75,17 @@ export class ChatService {
     // Extract all unique participant user IDs to batch-fetch presence
     const allUserIds = new Set<string>();
     for (const up of userParticipants) {
-      for (const p of up.conversation.participants) {
+      for (const p of up.conversation?.participants || []) {
         allUserIds.add(p.userId);
       }
     }
     const presenceMap = await this.presenceService.getBatchPresence(Array.from(allUserIds));
 
-    return userParticipants.map((up) => {
-      const conv = up.conversation;
-      const participants: ChatParticipant[] = conv.participants.map((p) => {
+    return userParticipants
+      .filter((up) => up.conversation)
+      .map((up) => {
+        const conv = up.conversation;
+        const participants: ChatParticipant[] = (conv.participants || []).map((p) => {
         const pres = presenceMap[p.userId];
         return {
           id: p.id,
@@ -120,6 +122,8 @@ export class ChatService {
             content: conv.messages[0].content,
             isEdited: conv.messages[0].isEdited,
             isDeleted: conv.messages[0].isDeleted,
+            isSystem: conv.messages[0].isSystem,
+            systemAction: conv.messages[0].systemAction,
             createdAt: conv.messages[0].createdAt,
             updatedAt: conv.messages[0].updatedAt,
             sender: conv.messages[0].sender,
@@ -378,6 +382,378 @@ export class ChatService {
     };
   }
 
+  async createGroupConversation(
+    creatorId: string,
+    dto: { recipientIds: string[]; title?: string; initialMessage?: string },
+  ): Promise<{ conversation: ConversationSummary; message?: ChatMessage }> {
+    const uniqueRecipientIds = Array.from(new Set(dto.recipientIds.filter((id) => id !== creatorId)));
+    if (uniqueRecipientIds.length === 0) {
+      throw new BadRequestException('At least one recipient must be specified');
+    }
+    const totalCount = uniqueRecipientIds.length + 1;
+    if (totalCount > 250) {
+      throw new BadRequestException('Group chat cannot exceed 250 participants');
+    }
+
+    // Verify all recipients exist
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: uniqueRecipientIds } },
+    });
+    if (users.length !== uniqueRecipientIds.length) {
+      throw new BadRequestException('One or more selected recipients could not be found');
+    }
+
+    const conv = await this.prisma.conversation.create({
+      data: {
+        type: 'GROUP',
+        title: dto.title?.trim() || null,
+        participants: {
+          create: [
+            { userId: creatorId, role: 'ADMIN', visibleFrom: new Date(0) },
+            ...uniqueRecipientIds.map((userId) => ({
+              userId,
+              role: 'MEMBER' as const,
+              visibleFrom: new Date(0),
+            })),
+          ],
+        },
+      },
+      include: {
+        participants: true,
+      },
+    });
+
+    let createdMessage: any = null;
+    if (dto.initialMessage && dto.initialMessage.trim().length > 0) {
+      createdMessage = await this.prisma.message.create({
+        data: {
+          conversationId: conv.id,
+          senderId: creatorId,
+          content: dto.initialMessage.trim(),
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              avatarUrl: true,
+              jobTitle: true,
+              department: true,
+              role: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
+        },
+      });
+      await this.prisma.conversation.update({
+        where: { id: conv.id },
+        data: { updatedAt: new Date() },
+      });
+    }
+
+    const conversations = await this.getUserConversations(creatorId);
+    const summary = conversations.find((c) => c.id === conv.id)!;
+
+    // Real-time broadcast to all participants
+    const allIds = [creatorId, ...uniqueRecipientIds];
+    for (const uid of allIds) {
+      this.eventsGateway.emitToRoom(`user:${uid}`, 'chat:conversation_updated', summary);
+      if (createdMessage) {
+        this.eventsGateway.emitToRoom(`user:${uid}`, 'chat:message', createdMessage);
+      }
+    }
+    if (createdMessage) {
+      this.eventsGateway.emitToRoom(`chat:${conv.id}`, 'chat:message', createdMessage);
+    }
+
+    return {
+      conversation: summary,
+      message: createdMessage,
+    };
+  }
+
+  async updateConversationTitle(
+    conversationId: string,
+    userId: string,
+    title: string,
+  ): Promise<ConversationSummary> {
+    const participant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId, userId },
+      },
+      include: { user: true },
+    });
+    if (!participant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const conv = await this.prisma.conversation.findUnique({
+      where: { id: conversationId },
+    });
+    if (!conv) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const newTitle = title.trim();
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { title: newTitle, updatedAt: new Date() },
+    });
+
+    // Create system message
+    const systemMessage = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: userId,
+        content: `${participant.user.displayName} named the group "${newTitle}"`,
+        isSystem: true,
+        systemAction: 'TITLE_CHANGED',
+        metadata: { title: newTitle, changedBy: userId },
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            jobTitle: true,
+            department: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    const conversations = await this.getUserConversations(userId);
+    const summary = conversations.find((c) => c.id === conversationId)!;
+
+    // Broadcast
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
+
+    const allParticipants = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+    for (const p of allParticipants) {
+      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:conversation_updated', summary);
+      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', systemMessage);
+    }
+
+    return summary;
+  }
+
+  async addParticipant(
+    conversationId: string,
+    actorId: string,
+    dto: { userId: string; historyOption?: 'none' | 'all' | 'days'; historyDays?: number },
+  ) {
+    const actorParticipant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId, userId: actorId },
+      },
+      include: { user: true },
+    });
+    if (!actorParticipant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const currentCount = await this.prisma.conversationParticipant.count({
+      where: { conversationId },
+    });
+    if (currentCount >= 250) {
+      throw new BadRequestException('Group chat cannot exceed 250 participants');
+    }
+
+    const targetUser = await this.prisma.user.findUnique({
+      where: { id: dto.userId },
+    });
+    if (!targetUser) {
+      throw new NotFoundException('User to add not found');
+    }
+
+    const existing = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId, userId: dto.userId },
+      },
+    });
+    if (existing) {
+      throw new BadRequestException('User is already a participant in this conversation');
+    }
+
+    let visibleFrom = new Date();
+    if (dto.historyOption === 'all') {
+      visibleFrom = new Date(0);
+    } else if (dto.historyOption === 'days') {
+      const days = dto.historyDays && dto.historyDays > 0 ? dto.historyDays : 1;
+      visibleFrom = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    }
+
+    await this.prisma.conversationParticipant.create({
+      data: {
+        conversationId,
+        userId: dto.userId,
+        role: 'MEMBER',
+        visibleFrom,
+      },
+    });
+
+    const systemMessage = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: actorId,
+        content: `${actorParticipant.user.displayName} added ${targetUser.displayName} to the chat`,
+        isSystem: true,
+        systemAction: 'MEMBER_ADDED',
+        metadata: { addedUserId: dto.userId, addedBy: actorId, historyOption: dto.historyOption },
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            jobTitle: true,
+            department: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+
+    const conversations = await this.getUserConversations(actorId);
+    const summary = conversations.find((c) => c.id === conversationId)!;
+
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
+
+    const allParticipants = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+    for (const p of allParticipants) {
+      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:conversation_updated', summary);
+      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', systemMessage);
+    }
+
+    return { conversation: summary, message: systemMessage };
+  }
+
+  async removeParticipant(
+    conversationId: string,
+    actorId: string,
+    targetUserId: string,
+  ) {
+    const actorParticipant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId, userId: actorId },
+      },
+      include: { user: true },
+    });
+    if (!actorParticipant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const targetParticipant = await this.prisma.conversationParticipant.findUnique({
+      where: {
+        conversationId_userId: { conversationId, userId: targetUserId },
+      },
+      include: { user: true },
+    });
+    if (!targetParticipant) {
+      throw new NotFoundException('Participant not found in conversation');
+    }
+
+    const isSelfLeaving = actorId === targetUserId;
+
+    // Delete participant
+    await this.prisma.conversationParticipant.delete({
+      where: {
+        conversationId_userId: { conversationId, userId: targetUserId },
+      },
+    });
+
+    const actionText = isSelfLeaving
+      ? `${targetParticipant.user.displayName} left the chat`
+      : `${actorParticipant.user.displayName} removed ${targetParticipant.user.displayName} from the chat`;
+
+    const systemMessage = await this.prisma.message.create({
+      data: {
+        conversationId,
+        senderId: actorId,
+        content: actionText,
+        isSystem: true,
+        systemAction: isSelfLeaving ? 'MEMBER_LEFT' : 'MEMBER_REMOVED',
+        metadata: {
+          targetUserId,
+          actorId,
+          action: isSelfLeaving ? 'leave' : 'remove',
+        },
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            jobTitle: true,
+            department: true,
+            role: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
+      },
+    });
+
+    await this.prisma.conversation.update({
+      where: { id: conversationId },
+      data: { updatedAt: new Date() },
+    });
+
+    // Notify removed user
+    this.eventsGateway.emitToRoom(`user:${targetUserId}`, 'chat:participant_removed', {
+      conversationId,
+      userId: targetUserId,
+      message: systemMessage,
+    });
+
+    // Notify remaining participants
+    const remaining = await this.prisma.conversationParticipant.findMany({
+      where: { conversationId },
+      select: { userId: true },
+    });
+
+    if (remaining.length > 0) {
+      const conversations = await this.getUserConversations(remaining[0].userId);
+      const summary = conversations.find((c) => c.id === conversationId);
+
+      this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
+      this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
+
+      for (const p of remaining) {
+        this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:conversation_updated', summary);
+        this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', systemMessage);
+      }
+    }
+
+    return { success: true };
+  }
+
   async getMessages(conversationId: string, userId: string, limit = 50) {
     const participant = await this.prisma.conversationParticipant.findUnique({
       where: {
@@ -393,7 +769,12 @@ export class ChatService {
     }
 
     const messages = await this.prisma.message.findMany({
-      where: { conversationId },
+      where: {
+        conversationId,
+        createdAt: {
+          gte: participant.visibleFrom,
+        },
+      },
       orderBy: { createdAt: 'asc' },
       take: limit,
       include: {
@@ -500,7 +881,7 @@ export class ChatService {
       this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', message);
     }
 
-    return message;
+    return message as unknown as ChatMessage;
   }
 
   async markAsRead(conversationId: string, userId: string) {

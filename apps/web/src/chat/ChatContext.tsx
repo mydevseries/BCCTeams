@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { ConversationSummary, ChatMessage, MemberProfile } from '@bcc/shared';
+import { ConversationSummary, ChatMessage, MemberProfile, HistoryShareOption } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
 
@@ -8,12 +8,26 @@ interface ChatContextType {
   activeConversationId: string | null;
   activeConversation: ConversationSummary | null;
   activeRecipient: MemberProfile | null;
+  selectedRecipients: MemberProfile[];
+  draftTitle: string;
   messages: ChatMessage[];
   isDraft: boolean;
   isLoading: boolean;
   setActiveConversationId: (id: string | null) => void;
   startDraftChat: (recipient?: MemberProfile | null) => void;
   selectRecipient: (recipient: MemberProfile) => Promise<void>;
+  addDraftRecipient: (recipient: MemberProfile) => void;
+  removeDraftRecipient: (recipientId: string) => void;
+  setDraftTitle: (title: string) => void;
+  updateGroupTitle: (conversationId: string, title: string) => Promise<void>;
+  addParticipant: (
+    conversationId: string,
+    userId: string,
+    historyOption?: HistoryShareOption,
+    historyDays?: number,
+  ) => Promise<void>;
+  removeParticipant: (conversationId: string, userId: string) => Promise<void>;
+  leaveGroup: (conversationId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
   loadConversations: () => Promise<void>;
 }
@@ -26,13 +40,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [activeConversationId, setActiveConversationIdState] = useState<string | null>(null);
-  const [activeRecipient, setActiveRecipient] = useState<MemberProfile | null>(null);
+  const [selectedRecipients, setSelectedRecipients] = useState<MemberProfile[]>([]);
+  const [draftTitle, setDraftTitle] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const activeConvIdRef = useRef<string | null>(null);
   activeConvIdRef.current = activeConversationId;
+
+  // Single active recipient for 1:1 convenience
+  const activeRecipient = selectedRecipients.length === 1 ? selectedRecipients[0] : null;
 
   // Load all user conversations
   const loadConversations = useCallback(async () => {
@@ -89,9 +107,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setActiveConversationIdState(id);
     if (id) {
       setIsDraft(false);
-      setActiveRecipient(null);
+      setSelectedRecipients([]);
+      setDraftTitle('');
       loadMessages(id);
-      // Join chat room via socket
       if (socket && socket.connected) {
         socket.emit('room:join', `chat:${id}`);
       }
@@ -104,18 +122,30 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const startDraftChat = useCallback((recipient?: MemberProfile | null) => {
     setActiveConversationIdState(null);
     setIsDraft(true);
+    setDraftTitle('');
     if (recipient) {
-      selectRecipient(recipient);
+      setSelectedRecipients([recipient]);
     } else {
-      setActiveRecipient(null);
+      setSelectedRecipients([]);
       setMessages([]);
     }
   }, []);
 
-  // Select recipient in recipient picker
+  const addDraftRecipient = useCallback((recipient: MemberProfile) => {
+    setSelectedRecipients((prev) => {
+      if (prev.some((r) => r.id === recipient.id)) return prev;
+      return [...prev, recipient];
+    });
+  }, []);
+
+  const removeDraftRecipient = useCallback((recipientId: string) => {
+    setSelectedRecipients((prev) => prev.filter((r) => r.id !== recipientId));
+  }, []);
+
+  // Select 1:1 recipient in recipient picker
   const selectRecipient = useCallback(async (recipient: MemberProfile) => {
     if (!token) return;
-    setActiveRecipient(recipient);
+    setSelectedRecipients([recipient]);
     setIsLoading(true);
     try {
       const res = await fetch(`/api/chat/direct/${recipient.id}`, {
@@ -144,43 +174,164 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token, socket]);
 
-  // Send message
-  const sendMessage = useCallback(async (content: string) => {
-    if (!token || !content.trim()) return;
+  // Update group title
+  const updateGroupTitle = useCallback(async (conversationId: string, title: string) => {
+    if (!token || !title.trim()) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ title: title.trim() }),
+      });
+      if (res.ok) {
+        const updated: ConversationSummary = await res.json();
+        setConversations((prev) => [updated, ...prev.filter((c) => c.id !== updated.id)]);
+      }
+    } catch (err) {
+      console.error('Failed to update group title', err);
+    }
+  }, [token]);
 
-    if (isDraft && activeRecipient) {
-      // First message in draft conversation
-      setIsLoading(true);
+  // Add participant to group chat
+  const addParticipant = useCallback(
+    async (
+      conversationId: string,
+      userId: string,
+      historyOption: HistoryShareOption = 'none',
+      historyDays = 1,
+    ) => {
+      if (!token) return;
       try {
-        const res = await fetch('/api/chat/conversations/direct', {
+        const res = await fetch(`/api/chat/conversations/${conversationId}/participants`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            recipientId: activeRecipient.id,
-            initialMessage: content.trim(),
-          }),
+          body: JSON.stringify({ userId, historyOption, historyDays }),
         });
-
         if (res.ok) {
           const data = await res.json();
-          const newConv: ConversationSummary = data.conversation;
-          const newMsg: ChatMessage | undefined = data.message;
-
-          setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
-          setActiveConversationIdState(newConv.id);
-          setIsDraft(false);
-          if (newMsg) {
-            setMessages([newMsg]);
+          if (data.conversation) {
+            setConversations((prev) => [data.conversation, ...prev.filter((c) => c.id !== data.conversation.id)]);
           }
-          if (socket && socket.connected) {
-            socket.emit('room:join', `chat:${newConv.id}`);
+          if (data.message && activeConvIdRef.current === conversationId) {
+            setMessages((prev) => [...prev, data.message]);
           }
         }
       } catch (err) {
-        console.error('Failed to create direct conversation with initial message', err);
+        console.error('Failed to add participant', err);
+      }
+    },
+    [token],
+  );
+
+  // Remove participant from group chat
+  const removeParticipant = useCallback(async (conversationId: string, targetUserId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/participants/${targetUserId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        await loadConversations();
+        if (activeConvIdRef.current === conversationId) {
+          await loadMessages(conversationId);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to remove participant', err);
+    }
+  }, [token, loadConversations, loadMessages]);
+
+  // Leave group chat
+  const leaveGroup = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/leave`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+        if (activeConvIdRef.current === conversationId) {
+          setActiveConversationIdState(null);
+          setMessages([]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to leave group chat', err);
+    }
+  }, [token]);
+
+  // Send message
+  const sendMessage = useCallback(async (content: string) => {
+    if (!token || !content.trim()) return;
+
+    if (isDraft && selectedRecipients.length > 0) {
+      setIsLoading(true);
+      try {
+        if (selectedRecipients.length === 1) {
+          // Direct 1:1 conversation
+          const res = await fetch('/api/chat/conversations/direct', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              recipientId: selectedRecipients[0].id,
+              initialMessage: content.trim(),
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const newConv: ConversationSummary = data.conversation;
+            const newMsg: ChatMessage | undefined = data.message;
+            setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
+            setActiveConversationIdState(newConv.id);
+            setIsDraft(false);
+            setSelectedRecipients([]);
+            if (newMsg) setMessages([newMsg]);
+            if (socket && socket.connected) {
+              socket.emit('room:join', `chat:${newConv.id}`);
+            }
+          }
+        } else {
+          // Group conversation (2 to 250 participants)
+          const res = await fetch('/api/chat/conversations/group', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({
+              recipientIds: selectedRecipients.map((r) => r.id),
+              title: draftTitle.trim() || undefined,
+              initialMessage: content.trim(),
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const newConv: ConversationSummary = data.conversation;
+            const newMsg: ChatMessage | undefined = data.message;
+            setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
+            setActiveConversationIdState(newConv.id);
+            setIsDraft(false);
+            setSelectedRecipients([]);
+            setDraftTitle('');
+            if (newMsg) setMessages([newMsg]);
+            if (socket && socket.connected) {
+              socket.emit('room:join', `chat:${newConv.id}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to create conversation with message', err);
       } finally {
         setIsLoading(false);
       }
@@ -198,12 +349,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (res.ok) {
           const sentMessage: ChatMessage = await res.json();
-          // Optimistically append if not already received from socket
           setMessages((prev) => {
             if (prev.some((m) => m.id === sentMessage.id)) return prev;
             return [...prev, sentMessage];
           });
-          // Update conversation in list
           setConversations((prev) => {
             const existing = prev.find((c) => c.id === activeConversationId);
             if (!existing) return prev;
@@ -219,14 +368,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Failed to send message', err);
       }
     }
-  }, [token, isDraft, activeRecipient, activeConversationId, socket]);
+  }, [token, isDraft, selectedRecipients, draftTitle, activeConversationId, socket]);
 
   // Listen for real-time socket events
   useEffect(() => {
     if (!socket) return;
 
     const handleMessage = (msg: ChatMessage) => {
-      // If message is for currently active conversation, append it
       if (activeConvIdRef.current === msg.conversationId) {
         setMessages((prev) => {
           if (prev.some((m) => m.id === msg.id)) return prev;
@@ -234,11 +382,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      // Update conversations list summary
       setConversations((prev) => {
         const convIndex = prev.findIndex((c) => c.id === msg.conversationId);
         if (convIndex === -1) {
-          // If conversation is not in list yet, reload conversations
           loadConversations();
           return prev;
         }
@@ -256,14 +402,28 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setConversations((prev) => [conv, ...prev.filter((c) => c.id !== conv.id)]);
     };
 
+    const handleParticipantRemoved = (payload: { conversationId: string; userId: string }) => {
+      if (payload.userId === user?.id) {
+        setConversations((prev) => prev.filter((c) => c.id !== payload.conversationId));
+        if (activeConvIdRef.current === payload.conversationId) {
+          setActiveConversationIdState(null);
+          setMessages([]);
+        }
+      } else {
+        loadConversations();
+      }
+    };
+
     socket.on('chat:message', handleMessage);
     socket.on('chat:conversation_updated', handleConversationUpdated);
+    socket.on('chat:participant_removed', handleParticipantRemoved);
 
     return () => {
       socket.off('chat:message', handleMessage);
       socket.off('chat:conversation_updated', handleConversationUpdated);
+      socket.off('chat:participant_removed', handleParticipantRemoved);
     };
-  }, [socket, loadConversations]);
+  }, [socket, user?.id, loadConversations]);
 
   const activeConversation =
     conversations.find((c) => c.id === activeConversationId) || null;
@@ -275,12 +435,21 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         activeConversationId,
         activeConversation,
         activeRecipient,
+        selectedRecipients,
+        draftTitle,
         messages,
         isDraft,
         isLoading,
         setActiveConversationId,
         startDraftChat,
         selectRecipient,
+        addDraftRecipient,
+        removeDraftRecipient,
+        setDraftTitle,
+        updateGroupTitle,
+        addParticipant,
+        removeParticipant,
+        leaveGroup,
         sendMessage,
         loadConversations,
       }}
@@ -295,12 +464,21 @@ const defaultChatContext: ChatContextType = {
   activeConversationId: null,
   activeConversation: null,
   activeRecipient: null,
+  selectedRecipients: [],
+  draftTitle: '',
   messages: [],
   isDraft: false,
   isLoading: false,
   setActiveConversationId: () => {},
   startDraftChat: () => {},
   selectRecipient: async () => {},
+  addDraftRecipient: () => {},
+  removeDraftRecipient: () => {},
+  setDraftTitle: () => {},
+  updateGroupTitle: async () => {},
+  addParticipant: async () => {},
+  removeParticipant: async () => {},
+  leaveGroup: async () => {},
   sendMessage: async () => {},
   loadConversations: async () => {},
 };

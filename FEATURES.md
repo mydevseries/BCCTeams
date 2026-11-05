@@ -90,7 +90,7 @@ Feature IDs are used with /build-feature <id>.
 | ID | Feature | Status |
 |---|---|---|
 | C-001 | 1:1 chat: start a new chat with any user | Built |
-| C-002 | Group chat: up to 250 people, optional group name, add/remove people | Todo |
+| C-002 | Group chat: up to 250 people, optional group name, add/remove people | Built |
 | C-003 | Chat list: recent chats, unread bold + count, pin, mute, hide, mark unread | Todo |
 | C-004 | Send messages in real time; typing indicator; sent/read receipts | Todo |
 | C-005 | Rich text: bold, italic, underline, strike, lists, quotes, code blocks, links, headings | Todo |

@@ -43,6 +43,9 @@ model User {
   settings            UserSettings?
   conversations       ConversationParticipant[]
   messages            Message[]
+  reactions           MessageReaction[]
+  savedMessages       SavedMessage[]
+  pollVotes           PollVote[]
 
   @@index([email])
 }
@@ -111,6 +114,12 @@ enum ParticipantRole {
   MEMBER
 }
 
+enum MessageImportance {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
 model Conversation {
   id           String                    @id @default(uuid())
   type         ConversationType          @default(DIRECT)
@@ -131,10 +140,12 @@ model ConversationParticipant {
   userId         String
   role           ParticipantRole @default(MEMBER)
   joinedAt       DateTime        @default(now())
+  visibleFrom    DateTime        @default(now())
   lastReadAt     DateTime        @default(now())
   isPinned       Boolean         @default(false)
   isMuted        Boolean         @default(false)
   isArchived     Boolean         @default(false)
+  isHidden       Boolean         @default(false)
 
   conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -145,18 +156,95 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String          @id @default(uuid())
+  id             String            @id @default(uuid())
   conversationId String
   senderId       String
   content        String
-  isEdited       Boolean         @default(false)
-  isDeleted      Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  importance     MessageImportance @default(NORMAL)
+  replyToId      String?
+  isEdited       Boolean           @default(false)
+  isDeleted      Boolean           @default(false)
+  isPinned       Boolean           @default(false)
+  pinnedAt       DateTime?
+  pinnedById     String?
+  scheduledAt    DateTime?
+  isSystem       Boolean           @default(false)
+  systemAction   String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User            @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo        Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]         @relation("MessageReplies")
+  reactions      MessageReaction[]
+  savedBy        SavedMessage[]
+  poll           Poll?
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([scheduledAt])
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model SavedMessage {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model Poll {
+  id            String       @id @default(uuid())
+  messageId     String       @unique
+  question      String
+  isAnonymous   Boolean      @default(false)
+  allowMultiple Boolean      @default(false)
+  closedAt      DateTime?
+  createdAt     DateTime     @default(now())
+
+  message       Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  options       PollOption[]
+}
+
+model PollOption {
+  id        String     @id @default(uuid())
+  pollId    String
+  text      String
+
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     PollVote[]
+}
+
+model PollVote {
+  id        String     @id @default(uuid())
+  optionId  String
+  userId    String
+  createdAt DateTime   @default(now())
+
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, userId])
+  @@index([userId])
 }

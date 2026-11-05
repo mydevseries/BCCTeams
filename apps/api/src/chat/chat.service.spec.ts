@@ -40,6 +40,7 @@ describe('ChatService (C-001)', () => {
       conversation: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
       },
@@ -48,6 +49,8 @@ describe('ChatService (C-001)', () => {
         findUnique: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+        delete: jest.fn(),
+        count: jest.fn(),
       },
       message: {
         findMany: jest.fn(),
@@ -55,6 +58,7 @@ describe('ChatService (C-001)', () => {
       },
       user: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
       },
     };
 
@@ -219,6 +223,223 @@ describe('ChatService (C-001)', () => {
       const msg = await service.sendMessage('conv-1', 'user-1', 'Test content');
       expect(msg.content).toBe('Test content');
       expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('chat:conv-1', 'chat:message', msg);
+    });
+  });
+
+  describe('C-002: Group Chat', () => {
+    const mockUser3 = {
+      id: 'user-3',
+      email: 'user3@bcc.test',
+      displayName: 'Charlie Colleague',
+      avatarUrl: null,
+      jobTitle: 'Product Manager',
+      department: 'Product',
+      role: 'MEMBER',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('creates a group conversation with multiple recipients', async () => {
+      prisma.user.findMany.mockResolvedValue([mockUser2, mockUser3]);
+      prisma.conversation.create.mockResolvedValue({
+        id: 'group-1',
+        type: 'GROUP',
+        title: 'Project Alpha',
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([
+        {
+          conversation: {
+            id: 'group-1',
+            type: 'GROUP',
+            title: 'Project Alpha',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            participants: [
+              { id: 'p1', conversationId: 'group-1', userId: 'user-1', role: 'ADMIN', user: mockUser1 },
+              { id: 'p2', conversationId: 'group-1', userId: 'user-2', role: 'MEMBER', user: mockUser2 },
+              { id: 'p3', conversationId: 'group-1', userId: 'user-3', role: 'MEMBER', user: mockUser3 },
+            ],
+            messages: [],
+          },
+        },
+      ]);
+
+      const result = await service.createGroupConversation('user-1', {
+        recipientIds: ['user-2', 'user-3'],
+        title: 'Project Alpha',
+      });
+
+      expect(result.conversation.id).toBe('group-1');
+      expect(result.conversation.type).toBe('GROUP');
+      expect(result.conversation.title).toBe('Project Alpha');
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-2', 'chat:conversation_updated', expect.anything());
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-3', 'chat:conversation_updated', expect.anything());
+    });
+
+    it('throws BadRequestException if recipient list is empty', async () => {
+      await expect(
+        service.createGroupConversation('user-1', { recipientIds: [] }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('updates group conversation title and creates a system message', async () => {
+      prisma.conversationParticipant.findUnique.mockResolvedValue({
+        id: 'p1',
+        conversationId: 'group-1',
+        userId: 'user-1',
+        user: mockUser1,
+      });
+      prisma.conversation.findUnique.mockResolvedValue({
+        id: 'group-1',
+        title: 'Old Title',
+      });
+      prisma.conversation.update.mockResolvedValue({
+        id: 'group-1',
+        title: 'New Title',
+      });
+      prisma.message.create.mockResolvedValue({
+        id: 'sys-msg-1',
+        conversationId: 'group-1',
+        senderId: 'user-1',
+        content: 'Alice User named the group "New Title"',
+        isSystem: true,
+        systemAction: 'TITLE_CHANGED',
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([
+        {
+          conversation: {
+            id: 'group-1',
+            type: 'GROUP',
+            title: 'New Title',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            participants: [
+              { id: 'p1', conversationId: 'group-1', userId: 'user-1', role: 'ADMIN', user: mockUser1 },
+            ],
+            messages: [],
+          },
+          userId: 'user-1',
+        },
+      ]);
+
+      const res = await service.updateConversationTitle('group-1', 'user-1', 'New Title');
+      expect(res.title).toBe('New Title');
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('chat:group-1', 'chat:message', expect.anything());
+    });
+
+    it('adds a participant with history sharing options and emits system message', async () => {
+      prisma.conversationParticipant.findUnique
+        .mockResolvedValueOnce({ id: 'p1', conversationId: 'group-1', userId: 'user-1', user: mockUser1 }) // actor
+        .mockResolvedValueOnce(null); // target does not exist yet
+      prisma.conversationParticipant.count.mockResolvedValue(2);
+      prisma.user.findUnique.mockResolvedValue(mockUser3);
+      prisma.conversationParticipant.create.mockResolvedValue({
+        id: 'p3',
+        conversationId: 'group-1',
+        userId: 'user-3',
+      });
+      prisma.message.create.mockResolvedValue({
+        id: 'sys-msg-2',
+        conversationId: 'group-1',
+        senderId: 'user-1',
+        content: 'Alice User added Charlie Colleague to the chat',
+        isSystem: true,
+        systemAction: 'MEMBER_ADDED',
+      });
+      prisma.conversationParticipant.findMany.mockResolvedValue([
+        {
+          conversation: {
+            id: 'group-1',
+            type: 'GROUP',
+            title: 'Project Alpha',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            participants: [
+              { id: 'p1', conversationId: 'group-1', userId: 'user-1', role: 'ADMIN', user: mockUser1 },
+              { id: 'p2', conversationId: 'group-1', userId: 'user-2', role: 'MEMBER', user: mockUser2 },
+              { id: 'p3', conversationId: 'group-1', userId: 'user-3', role: 'MEMBER', user: mockUser3 },
+            ],
+            messages: [],
+          },
+          userId: 'user-1',
+        },
+      ]);
+
+      const res = await service.addParticipant('group-1', 'user-1', {
+        userId: 'user-3',
+        historyOption: 'days',
+        historyDays: 7,
+      });
+
+      expect(res.message.isSystem).toBe(true);
+      expect(res.message.systemAction).toBe('MEMBER_ADDED');
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('chat:group-1', 'chat:message', expect.anything());
+    });
+
+    it('allows a participant to leave voluntarily with a departure system message', async () => {
+      prisma.conversationParticipant.findUnique
+        .mockResolvedValueOnce({ id: 'p2', conversationId: 'group-1', userId: 'user-2', user: mockUser2 }) // actor
+        .mockResolvedValueOnce({ id: 'p2', conversationId: 'group-1', userId: 'user-2', user: mockUser2 }); // target
+      prisma.conversationParticipant.delete.mockResolvedValue({});
+      prisma.message.create.mockResolvedValue({
+        id: 'sys-msg-3',
+        conversationId: 'group-1',
+        senderId: 'user-2',
+        content: 'Bob Colleague left the chat',
+        isSystem: true,
+        systemAction: 'MEMBER_LEFT',
+      });
+      prisma.conversationParticipant.findMany
+        .mockResolvedValueOnce([{ userId: 'user-1' }]) // remaining participants
+        .mockResolvedValueOnce([
+          {
+            conversation: {
+              id: 'group-1',
+              type: 'GROUP',
+              title: 'Project Alpha',
+              participants: [{ id: 'p1', userId: 'user-1', role: 'ADMIN', user: mockUser1 }],
+              messages: [],
+            },
+            userId: 'user-1',
+          },
+        ]);
+
+      const res = await service.removeParticipant('group-1', 'user-2', 'user-2');
+      expect(res.success).toBe(true);
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-2', 'chat:participant_removed', expect.anything());
+    });
+
+    it('allows removing another member with a removal system message', async () => {
+      prisma.conversationParticipant.findUnique
+        .mockResolvedValueOnce({ id: 'p1', conversationId: 'group-1', userId: 'user-1', user: mockUser1 }) // actor
+        .mockResolvedValueOnce({ id: 'p2', conversationId: 'group-1', userId: 'user-2', user: mockUser2 }); // target
+      prisma.conversationParticipant.delete.mockResolvedValue({});
+      prisma.message.create.mockResolvedValue({
+        id: 'sys-msg-4',
+        conversationId: 'group-1',
+        senderId: 'user-1',
+        content: 'Alice User removed Bob Colleague from the chat',
+        isSystem: true,
+        systemAction: 'MEMBER_REMOVED',
+      });
+      prisma.conversationParticipant.findMany
+        .mockResolvedValueOnce([{ userId: 'user-1' }]) // remaining participants
+        .mockResolvedValueOnce([
+          {
+            conversation: {
+              id: 'group-1',
+              type: 'GROUP',
+              title: 'Project Alpha',
+              participants: [{ id: 'p1', userId: 'user-1', role: 'ADMIN', user: mockUser1 }],
+              messages: [],
+            },
+            userId: 'user-1',
+          },
+        ]);
+
+      const res = await service.removeParticipant('group-1', 'user-1', 'user-2');
+      expect(res.success).toBe(true);
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith('user:user-2', 'chat:participant_removed', expect.anything());
     });
   });
 });
