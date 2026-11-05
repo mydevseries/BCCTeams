@@ -51,11 +51,22 @@ Last Updated: 2026-11-05
 
 ---
 
+## Phase 2 (Chat) Feature Status
+
+| ID | Feature | Branch | Status | Notes / Verification |
+|---|---|---|---|---|
+| C-001 | 1:1 chat: start a new chat with any user | `feature/C-001` | **Built** | Recipient picker autocomplete, draft / existing conversation switching, header with direct actions, Playwright E2E test. Merged to master. |
+| C-002 | Group chat: up to 250 people, group name, add/remove members | `feature/C-002` | **Built** | Multi-recipient picker, inline title editing, member roster dialog, history sharing options, voluntary departure, system notifications. 14 Jest, 9 Vitest, Playwright E2E test. Merged to master. |
+| C-003 | Chat list: recent chats, unread bold + count, pin, mute, hide, mark unread | `feature/C-003` | **Built** | Pinned & Recent sections, unread count badges, pin/mute/hide/mark-unread actions, auto-unhide on new messages. 19 Jest, 2 Vitest, Playwright E2E test. Merged to master. |
+| C-004 | Send messages in real time; typing indicator; sent/read receipts | `feature/C-004` | **Built** | Real-time WebSocket delivery, typing indicator broadcast, single checkmark (sent) and double checkmark (read) receipts. 19 Jest, 12 Vitest, Playwright E2E test. Merged to master. |
+
+---
+
 ## Active Work
 
-- **Current Step:** Completed and verified F-006 (Roles & Permissions) integration into AppShell and DirectoryView; proceeding to Core Chat (Phase 2) starting with C-001 (1:1 Direct Chat).
+- **Current Step:** Completed C-004; starting C-005 (Rich text formatting).
 - **Active Branch:** `master`
-- **Next Up:** Feature C-001: 1:1 Direct Chat on branch `feature/C-001`. Followed by C-002 through C-011.
+- **Next Up:** Feature C-005: Rich text formatting on branch `feature/C-005`.
 
 ---
 
