@@ -29,6 +29,7 @@ import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
 import { MemberProfileCard } from '../components/profile/MemberProfileCard';
 import { useNavigate } from 'react-router-dom';
+import { useUserRole, GuestRestrictedBanner } from '../roles';
 
 const useStyles = makeStyles({
   container: {
@@ -117,6 +118,7 @@ export const DirectoryView: React.FC = () => {
   const { token } = useAuth();
   const navigate = useNavigate();
   const { getUserPresence, subscribeUsers, unsubscribeUsers } = usePresence();
+  const { canBrowseDirectory, isGuest } = useUserRole();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -224,6 +226,22 @@ export const DirectoryView: React.FC = () => {
     setSelectedMember(memberWithLive);
     setIsMemberCardOpen(true);
   };
+
+  if (isGuest || !canBrowseDirectory) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.header}>
+          <div>
+            <Title2 as="h1">Organization Directory</Title2>
+            <Caption1 block style={{ color: tokens.colorNeutralForeground3 }}>
+              Find colleagues across departments, view contact cards, and connect
+            </Caption1>
+          </div>
+        </div>
+        <GuestRestrictedBanner featureName="Organization Directory" />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PresenceModule } from './presence/presence.module';
 import { SettingsModule } from './settings/settings.module';
+import { RolesModule } from './roles/roles.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { SettingsModule } from './settings/settings.module';
     UsersModule,
     PresenceModule,
     SettingsModule,
+    RolesModule,
   ],
 })
 export class AppModule {}

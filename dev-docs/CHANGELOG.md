@@ -2,6 +2,48 @@
 ## [Unreleased]
 
 ### Added
+- **Feature F-006: Roles & Permissions (Org-Level Roles & UI Integration)**
+  - Backend NestJS `RolesModule`:
+    - Role verification service & guards (`RolesGuard`, `DirectoryRoleGuard`, `AdminGuard`).
+    - Guarded endpoints: `GET /api/roles/users`, `PATCH /api/roles/users/:id`, `GET /api/roles/summary`, `GET /api/roles/directory-access`.
+    - Protected last-admin lockout: prevents demoting the last active administrator.
+    - Restricted directory access: guest accounts receive HTTP 403 Forbidden on directory browsing.
+    - 30 Jest unit tests passing 100%.
+  - Frontend React + Fluent UI v9:
+    - `useUserRole` hook and `RolesContext` with current user permissions state.
+    - `AdminRolesModal` accessible from AvatarMenu for admins only.
+    - `AdminRolesView` route at `/admin/roles`.
+    - `GuestRestrictedBanner` displayed when guest attempts directory access.
+    - 9 Vitest component tests and 7 Playwright E2E tests passing 100%.
+- **Feature F-005: Settings (Theme, Language, Notification Preferences)**
+  - Backend NestJS `SettingsModule` with `UserSettings` model in Prisma.
+  - Endpoints `GET /api/settings/me` and `PATCH /api/settings/me`.
+  - Frontend `SettingsModal` with General (Theme, Language) and Notifications tabs.
+  - Themes: Light, Dark, System, and High Contrast.
+  - Locales: English, French, Spanish, German with instant UI string localization.
+  - Full keyboard accessibility and optimistic update caching.
+  - 3 Playwright E2E tests passing 100%.
+- **Feature F-006: Roles & Permissions (Org-Level Roles & UI Integration)**
+  - Backend NestJS `RolesModule`:
+    - Role verification service & guards (`RolesGuard`, `DirectoryRoleGuard`, `AdminGuard`).
+    - Guarded endpoints: `GET /api/roles/users`, `PATCH /api/roles/users/:id`, `GET /api/roles/summary`, `GET /api/roles/directory-access`.
+    - Protected last-admin lockout: prevents demoting the last active administrator.
+    - Restricted directory access: guest accounts receive HTTP 403 Forbidden on directory browsing.
+    - 30 Jest unit tests passing 100%.
+  - Frontend React + Fluent UI v9:
+    - `useUserRole` hook and `RolesContext` with current user permissions state.
+    - `AdminRolesModal` accessible from AvatarMenu for admins only.
+    - `AdminRolesView` route at `/admin/roles`.
+    - `GuestRestrictedBanner` displayed when guest attempts directory access.
+    - 9 Vitest component tests and 7 Playwright E2E tests passing 100%.
+- **Feature F-005: Settings (Theme, Language, Notification Preferences)**
+  - Backend NestJS `SettingsModule` with `UserSettings` model in Prisma.
+  - Endpoints `GET /api/settings/me` and `PATCH /api/settings/me`.
+  - Frontend `SettingsModal` with General (Theme, Language) and Notifications tabs.
+  - Themes: Light, Dark, System, and High Contrast.
+  - Locales: English, French, Spanish, German with instant UI string localization.
+  - Full keyboard accessibility and optimistic update caching.
+  - 3 Playwright E2E tests passing 100%.
 - **Feature A-010: Search Type-Ahead Dropdown (Partial - People)**
   - Built `SearchBox.tsx`:
     - Real-time debounced (<150ms) directory querying without pressing Enter.

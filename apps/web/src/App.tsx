@@ -16,6 +16,7 @@ import { SignUpView } from './views/auth/SignUpView';
 import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
 import { DirectoryView } from './views/DirectoryView';
+import { AdminRolesView } from './roles';
 
 const ThemedApp: React.FC = () => {
   const { fluentTheme } = useTheme();
@@ -55,6 +56,7 @@ const ThemedApp: React.FC = () => {
                 <Route index element={<Navigate to="/chat" replace />} />
                 <Route path="chat" element={<ChatView />} />
                 <Route path="directory" element={<DirectoryView />} />
+                <Route path="admin/roles" element={<AdminRolesView />} />
                 <Route path="activity" element={<ActivityView />} />
                 <Route
                   path="teams"

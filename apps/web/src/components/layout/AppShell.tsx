@@ -33,6 +33,7 @@ export const AppShell: React.FC = () => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<MemberProfile | null>(null);
 
   return (
@@ -42,6 +43,7 @@ export const AppShell: React.FC = () => {
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenStatusMessage={() => setIsStatusModalOpen(true)}
         onOpenSettings={() => setIsSettingsModalOpen(true)}
+        onOpenAdminRoles={() => setIsRolesModalOpen(true)}
         onSelectMember={setSelectedMember}
       />
 
@@ -61,6 +63,8 @@ export const AppShell: React.FC = () => {
           setIsStatusModalOpen={setIsStatusModalOpen}
           isSettingsModalOpen={isSettingsModalOpen}
           setIsSettingsModalOpen={setIsSettingsModalOpen}
+          isRolesModalOpen={isRolesModalOpen}
+          setIsRolesModalOpen={setIsRolesModalOpen}
           selectedMember={selectedMember}
           setSelectedMember={setSelectedMember}
         />

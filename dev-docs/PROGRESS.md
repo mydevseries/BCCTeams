@@ -20,7 +20,7 @@ Last Updated: 2026-11-05
 | **Phase C: Feature Expansion** | Complete catalog + 4-8 AC per P1/P2 | **Done** | Expanded across 13 phases, decisions documented |
 | **Project Setup** | Monorepo, Docker Compose, NestJS, Vite shell | **Done** | Built monorepo, AppShell, Fluent theme, verified with unit tests & screenshot |
 | **Task UI-001** | App Shell Overhaul & Design System | **Done** | Viewport reset, zero scroll, 14px typography, Light/Dark/System theme, 36 screenshots |
-| **Phase 1: Foundation** | F-001 through F-009 | **In Progress** | F-001, F-002, F-003 Verified. Starting F-004 |
+| **Phase 1: Foundation** | F-001 through F-009 | **In Progress** | F-001 through F-006 Verified. Starting Core Chat Phase 2 |
 | **Phase 2: Chat** | C-001 through C-033 | Todo | Starting after F-006 |
 | **Phase 3: Teams & Channels** | T-001 through T-020 | Todo | |
 | **Phase 4: Activity & Search** | A-001 through A-009 | Todo | |
@@ -45,15 +45,17 @@ Last Updated: 2026-11-05
 | F-003 | Organization directory: browse and search all users | `feature/F-003` | **Verified** | 3 Jest unit tests, 1 Vitest component test, 3 Playwright E2E tests passing 100%. Merged to master. |
 | UI-001 | App Shell Layout, Zero-Scroll & Theme Persistence | `fix/UI-001` | **Verified** | 36 screenshots, 13/13 Playwright E2E tests passing across 1920x1080 and 1366x768. |
 | F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | `feature/F-004` | **Verified** | 26 Jest unit tests, 12 Vitest tests, 3 Playwright multi-user E2E tests passing 100%. Merged to master. |
+| F-005 | Settings: theme (light/dark/high contrast), language, notification preferences | `feature/F-005` | **Verified** | 30 Jest backend tests, 18 Vitest component tests, 3 Playwright E2E tests passing 100%. Merged to master. |
+| F-006 | Roles: org admin, team owner, member, guest | `feature/F-006` | **Verified** | Org-level roles and permissions, admin modal, directory guest restrictions, last-admin protection. 30 Jest backend tests, 9 Vitest tests, 7 Playwright E2E tests passing 100%. Merged to master. |
 | A-010 | Search type-ahead dropdown | `feature/A-010` | **Partial** | People section, recent searches/people, suggested invite, Ctrl+E shortcut, Up/Down/Enter keyboard navigation. AppShell decomposed into TopBar, AppBar, ListPane, MainPane, AvatarMenu, SearchBox (all < 300 lines). 15 Vitest unit tests, 2 Playwright E2E tests passing 100%. |
 
 ---
 
 ## Active Work
 
-- **Current Step:** Completed A-010 (Partial) and AppShell decomposition (< 300 lines per component); proceeding to F-005 (Settings).
-- **Active Branch:** `feature/A-010`
-- **Next Up:** Feature F-005: Settings (theme, language, notification preferences). Then Core Chat (C-001 through C-011). F-006 skipped per instruction.
+- **Current Step:** Completed and verified F-006 (Roles & Permissions) integration into AppShell and DirectoryView; proceeding to Core Chat (Phase 2) starting with C-001 (1:1 Direct Chat).
+- **Active Branch:** `master`
+- **Next Up:** Feature C-001: 1:1 Direct Chat on branch `feature/C-001`. Followed by C-002 through C-011.
 
 ---
 

@@ -3,6 +3,7 @@ import { makeStyles, tokens } from '@fluentui/react-components';
 import { Outlet } from 'react-router-dom';
 import { ProfileModal } from '../profile/ProfileModal';
 import { SettingsModal } from '../settings/SettingsModal';
+import { AdminRolesModal } from '../../roles';
 import { StatusMessageModal } from '../presence/StatusMessageModal';
 import { MemberProfileCard } from '../profile/MemberProfileCard';
 import { MemberProfile } from '@bcc/shared';
@@ -26,6 +27,8 @@ interface MainPaneProps {
   setIsStatusModalOpen: (open: boolean) => void;
   isSettingsModalOpen: boolean;
   setIsSettingsModalOpen: (open: boolean) => void;
+  isRolesModalOpen: boolean;
+  setIsRolesModalOpen: (open: boolean) => void;
   selectedMember: MemberProfile | null;
   setSelectedMember: (member: MemberProfile | null) => void;
 }
@@ -37,6 +40,8 @@ export const MainPane: React.FC<MainPaneProps> = ({
   setIsStatusModalOpen,
   isSettingsModalOpen,
   setIsSettingsModalOpen,
+  isRolesModalOpen,
+  setIsRolesModalOpen,
   selectedMember,
   setSelectedMember,
 }) => {
@@ -59,6 +64,11 @@ export const MainPane: React.FC<MainPaneProps> = ({
       <SettingsModal
         open={isSettingsModalOpen}
         onOpenChange={setIsSettingsModalOpen}
+      />
+
+      <AdminRolesModal
+        open={isRolesModalOpen}
+        onOpenChange={setIsRolesModalOpen}
       />
 
       <MemberProfileCard

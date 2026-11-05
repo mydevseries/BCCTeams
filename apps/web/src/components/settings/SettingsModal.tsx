@@ -23,10 +23,6 @@ import {
 } from '@fluentui/react-components';
 import {
   DismissRegular,
-  WeatherSunnyRegular,
-  WeatherMoonRegular,
-  DesktopRegular,
-  ColorRegular,
   SettingsRegular,
   AlertRegular,
 } from '@fluentui/react-icons';

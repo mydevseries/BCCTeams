@@ -44,6 +44,8 @@ BCC Teams is BCC's internal collaboration platform: unified chat, teams, channel
   - `src/health/`: System health check verifying database and service availability.
   - `src/gateway/`: Socket.IO WebSocket gateway managing entity-scoped event broadcasting.
   - `src/users/`: Directory and user profile service/controller.
+  - `src/settings/`: User preferences and settings module.
+  - `src/roles/`: RBAC roles and permissions module (Admin, Member, Guest) with guards and protection.
   - `prisma/schema.prisma`: Relational models for Users, Tokens, Presence, and Settings.
 - `packages/shared`: Shared TypeScript types (`@bcc/shared`) consumed by both web and api packages.
 - `assets/brand/`: Vector and bitmap brand assets (`logo.svg`, `logo-mono.svg`, `icon-512.png`, `icon-192.png`, `favicon.ico`, `favicon.svg`).

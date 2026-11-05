@@ -75,6 +75,7 @@ interface TopBarProps {
   onOpenProfile: () => void;
   onOpenStatusMessage: () => void;
   onOpenSettings: () => void;
+  onOpenAdminRoles?: () => void;
   onSelectMember?: (member: MemberProfile) => void;
 }
 
@@ -82,6 +83,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenProfile,
   onOpenStatusMessage,
   onOpenSettings,
+  onOpenAdminRoles,
   onSelectMember,
 }) => {
   const styles = useStyles();
@@ -134,6 +136,7 @@ export const TopBar: React.FC<TopBarProps> = ({
           onOpenProfile={onOpenProfile}
           onOpenStatusMessage={onOpenStatusMessage}
           onOpenSettings={onOpenSettings}
+          onOpenAdminRoles={onOpenAdminRoles}
         />
       </div>
     </header>

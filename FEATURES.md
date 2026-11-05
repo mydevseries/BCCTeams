@@ -13,7 +13,7 @@ Feature IDs are used with /build-feature <id>.
 | F-003 | Organization directory: browse and search all users | Verified |
 | F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | Verified |
 | F-005 | Settings: theme (light/dark/high contrast), language, notification preferences | Verified |
-| F-006 | Roles: org admin, team owner, member, guest | Todo |
+| F-006 | Roles: org admin, team owner, member, guest | Verified |
 | F-007 | Multiple accounts and organizations: sign into multiple accounts with fast tenant switching | Todo |
 | F-008 | Immersive Reader: distraction-free reading mode with text-to-speech, font sizing, and syllable highlighting | Todo |
 | F-009 | Accessibility preferences: high contrast mode, screen reader landmarks, keyboard focus traps, reduced animation | Todo |

@@ -14,25 +14,30 @@ import {
   PeopleSearchRegular,
   SettingsRegular,
   SignOutRegular,
+  ShieldPersonRegular,
 } from '@fluentui/react-icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
 import { usePresence } from '../../presence/PresenceContext';
+import { useUserRole } from '../../roles';
 
 interface AvatarMenuProps {
   onOpenProfile: () => void;
   onOpenStatusMessage: () => void;
   onOpenSettings: () => void;
+  onOpenAdminRoles?: () => void;
 }
 
 export const AvatarMenu: React.FC<AvatarMenuProps> = ({
   onOpenProfile,
   onOpenStatusMessage,
   onOpenSettings,
+  onOpenAdminRoles,
 }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { myPresence, setMyStatus } = usePresence();
+  const { isAdmin } = useUserRole();
 
   const getFluentBadgeStatus = (status?: string): 'available' | 'busy' | 'do-not-disturb' | 'away' | 'offline' => {
     switch (status) {
@@ -129,6 +134,11 @@ export const AvatarMenu: React.FC<AvatarMenuProps> = ({
           <MenuItem icon={<SettingsRegular />} onClick={onOpenSettings}>
             Settings
           </MenuItem>
+          {isAdmin && (
+            <MenuItem icon={<ShieldPersonRegular />} onClick={onOpenAdminRoles}>
+              Roles & Permissions
+            </MenuItem>
+          )}
           <Divider />
 
           <MenuItem

@@ -17,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { DirectoryRoleGuard } from '../roles/guards/directory-role.guard';
 import { UserProfile, MemberProfile } from '@bcc/shared';
 import { Request } from 'express';
 
@@ -81,6 +82,7 @@ export class UsersController {
   }
 
   @Get()
+  @UseGuards(DirectoryRoleGuard)
   async getDirectory(
     @Query('query') query?: string,
     @Query('page') page?: number,
