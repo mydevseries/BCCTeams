@@ -2,6 +2,31 @@
 ## [Unreleased]
 
 ### Added
+- **Phase 5: Files (D-001 through D-005, D-009)**
+  - Storage & Database Architecture:
+    - Provider-agnostic IStorageService implemented with S3-compatible SeaweedFS client (@aws-sdk/client-s3) and local dev filesystem fallback.
+    - Supabase PostgreSQL persistence with Prisma migration 20261105100517_phase5_files_storage creating FileItem, FileVersion, FileShare, FileAccessRequest, and Attachment models.
+    - Enabled Row Level Security (RLS) on all 5 new tables in Supabase PostgreSQL.
+    - Generic Attachment model built decoupled from Message for chat agent integration in C-011.
+  - Backend NestJS FilesModule & StorageModule:
+    - FilesService and FilesController implementing full file lifecycle:
+      - D-001: Views for my-files (with folder breadcrumbs), ecent, and shared-with-me.
+      - D-002: Folder creation, multipart file upload, streaming download with Content-Disposition, rename, move, and cascading folder deletion.
+      - D-003: Inline preview stream with appropriate MIME typing.
+      - D-004: Sharing links generation, VIEW/EDIT permission models, scope control (ORGANIZATION, ANYONE_WITH_LINK, SPECIFIC_PEOPLE), public resolution via shareToken, and share revocation.
+      - D-005: Version history tracking, automatic version increments on re-upload, and version restoration.
+      - D-009: Access request creation with optional notes, owner pending requests query, and review workflow automatically provisioning FileShare records upon approval.
+    - 56 backend Jest tests (unit + controller + integration) passing 100%.
+  - Frontend React + Fluent UI v9 (pps/web/src/files):
+    - FilesView: Left navigation tabs (My files, Recent, Shared with me, Access requests), action bar, search filtering, breadcrumbs, drag-and-drop file upload target area, and file operation menus.
+    - FilePreviewModal (D-003): In-app preview supporting images (with interactive zoom/pan controls), embedded PDF viewer, HTML5 video/audio playback, formatted code/text preview, and unsupported fallback.
+    - ShareModal (D-004): Configurable permissions and scopes, shareable URL generation, copy-to-clipboard, and active share management.
+    - VersionHistoryModal (D-005): Historical versions list with timestamps, author attribution, size, current version indicator, and one-click restore.
+    - RequestAccessModal & AccessRequestsTab (D-009): Restricted access prompt with permission selector and note, file owner pending requests dashboard with pending badge counter, and Approve/Deny actions.
+    - 18 Vitest component tests passing 100%.
+  - End-to-End Suite (	ests/e2e/phase5-files.spec.ts):
+    - Comprehensive Playwright test suite validating all acceptance criteria for D-001, D-002, D-003, D-004, D-005, D-009, and shared attachment APIs.
+
 - **Feature F-006: Roles & Permissions (Org-Level Roles & UI Integration)**
   - Backend NestJS `RolesModule`:
     - Role verification service & guards (`RolesGuard`, `DirectoryRoleGuard`, `AdminGuard`).

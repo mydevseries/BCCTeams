@@ -24,7 +24,7 @@ Last Updated: 2026-11-05
 | **Phase 2: Chat** | C-001 through C-033 | Todo | Starting after F-006 |
 | **Phase 3: Teams & Channels** | T-001 through T-020 | Todo | |
 | **Phase 4: Activity & Search** | A-001 through A-009 | Todo | |
-| **Phase 5: Files** | D-001 through D-008 | Todo | |
+| **Phase 5: Files** | D-001 through D-005, D-009 | **Verified** | StorageService (S3/SeaweedFS + local fallback), Supabase PostgreSQL with RLS, full files UI & APIs |
 | **Phase 6: Meetings** | M-001 through M-040 | Todo | |
 | **Phase 7: Calls** | K-001 through K-014 | Todo | |
 | **Phase 8: Apps** | P-001 through P-009 | Todo | |
@@ -50,6 +50,21 @@ Last Updated: 2026-11-05
 | A-010 | Search type-ahead dropdown | `feature/A-010` | **Partial** | People section, recent searches/people, suggested invite, Ctrl+E shortcut, Up/Down/Enter keyboard navigation. AppShell decomposed into TopBar, AppBar, ListPane, MainPane, AvatarMenu, SearchBox (all < 300 lines). 15 Vitest unit tests, 2 Playwright E2E tests passing 100%. |
 
 ---
+
+
+---
+
+## Phase 5 Feature Status (Files)
+
+| ID | Feature | Branch | Status | Notes / Verification |
+|---|---|---|---|---|
+| D-001 | Files app: recent, my files, shared with me, downloads | eature/files | **Verified** | Fluent UI v9 FilesView with tab navigation, breadcrumb navigation, and empty states. 56 backend tests + 18 frontend tests passing. |
+| D-002 | File library with folders, upload, download, rename, move, delete | eature/files | **Verified** | Folder hierarchy, multipart upload to SeaweedFS/local disk with Supabase PostgreSQL metadata, stream download with Content-Disposition, rename, move, cascading delete. |
+| D-003 | File preview in app (images, PDF, video, audio, text/code) | eature/files | **Verified** | FilePreviewModal supporting zoom/pan for images, iframe PDF viewer, HTML5 video/audio players, text/code viewer, and unsupported fallback. |
+| D-004 | Sharing links with permissions (view/edit, people/org/anyone) | eature/files | **Verified** | ShareModal creating unique share tokens, view/edit permissions, org/anyone/specific scopes, active shares list, access revocation. |
+| D-005 | Version history and restore | eature/files | **Verified** | VersionHistoryModal displaying version list with metadata, auto-versioning duplicate uploads, and one-click version restore. |
+| D-006 | Co-editing documents (Collabora Online via WOPI) | eature/files | **Deferred** | Requires external WOPI server infrastructure. |
+| D-009 | File access requests: restricted files, owner approve/deny workflow | eature/files | **Verified** | RequestAccessModal with optional reason note, AccessRequestsTab with pending badge count, owner approve (view/edit) & deny workflow creating FileShare records automatically. |
 
 ## Active Work
 

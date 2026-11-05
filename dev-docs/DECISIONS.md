@@ -66,3 +66,13 @@
 - **Features affected:** Persistence, Users, Tokens, Presence, UserSettings, Monorepo Data Layer
 - **Decision:** Connect NestJS API directly to cloud-managed Supabase PostgreSQL instance (`ap-northeast-2` region). Utilize Supabase's transaction pooler (port 6543) with PgBouncer for API runtime queries and the session pooler (port 5432) via Prisma `directUrl` for schema push and migrations.
 - **Reason:** Provides reliable, highly available cloud-hosted PostgreSQL with built-in connection pooling, automated backups, and row-level security capabilities without requiring a local database daemon on developer machines.
+
+
+---
+
+## 2026-11-05 — Phase 5 Files Storage Architecture & Cross-Module Attachment Decoupling
+
+### 10. SeaweedFS Object Storage with Local Disk Fallback & Supabase PostgreSQL RLS
+- **Features affected:** D-001 through D-005, D-009, C-011 (Attachments)
+- **Decision:** Implement a provider-agnostic IStorageService using AWS SDK v3 for SeaweedFS (S3-compatible) running as a docker-compose service, with transparent automated fallback to local filesystem storage (uploads/storage/) for dev environments without Docker. Store all relational metadata (files, folders, versions, shares, access requests) in Supabase PostgreSQL through Prisma migrations with Row Level Security (RLS) enabled on all tables. Decouple the generic Attachment model from Message to prevent cross-branch migration lock contention with the parallel Chat agent (C-011 will add messageId and the relation).
+- **Reason:** Guarantees zero data loss, high performance object storage, complete dev environment resiliency, and zero Git/Prisma merge conflicts between parallel agents.

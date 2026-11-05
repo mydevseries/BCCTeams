@@ -376,14 +376,61 @@ Feature IDs are used with /build-feature <id>.
 ## Phase 5 — Files
 | ID | Feature | Status |
 |---|---|---|
-| D-001 | Files app: recent, my files, shared with me, downloads | Todo |
-| D-002 | Team/channel file library with folders, upload, download, rename, move, delete | Todo |
-| D-003 | File preview in app (images, PDF, video, Office files via preview service) | Todo |
-| D-004 | Sharing links with permissions (view/edit, people/org/anyone) | Todo |
-| D-005 | Version history and restore | Todo |
-| D-006 | Co-editing documents (integrate Collabora Online via WOPI) | Todo |
+| D-001 | Files app: recent, my files, shared with me, downloads | Verified |
+| D-002 | Team/channel file library with folders, upload, download, rename, move, delete | Verified |
+| D-003 | File preview in app (images, PDF, video, Office files via preview service) | Verified |
+| D-004 | Sharing links with permissions (view/edit, people/org/anyone) | Verified |
+| D-005 | Version history and restore | Verified |
+| D-006 | Co-editing documents (integrate Collabora Online via WOPI) | Deferred |
 | D-007 | Recycle bin and file restoration: browse deleted files with a 30-day retention window and one-click restore | Todo |
 | D-008 | File checkout and locking: lock files during editing to prevent accidental overwrite conflicts | Todo |
+| D-009 | File access requests: request access to restricted files/folders, owner approve/deny workflow | Verified |
+
+### Acceptance criteria — Phase 5
+
+#### Acceptance criteria D-001:
+- The Files app presents four primary views in the sidebar: Recent, My files, Shared with me, and Downloads.
+- "My files" displays the user's root personal files and folders sorted by name, modified date, or size.
+- "Recent" displays files accessed or modified by the user within the last 30 days, sorted descending by last access timestamp.
+- "Shared with me" lists files and folders explicitly shared with the signed-in user or their organization.
+- "Downloads" logs downloaded files with quick-open and one-click re-download options.
+- Zero horizontal overflow and strict adherence to Fluent UI v9 design tokens and layout rules.
+
+#### Acceptance criteria D-002:
+- Users can create nested folders with custom names and breadcrumb navigation.
+- Users can upload single or multiple files (drag-and-drop or file picker) with progress indicator; bytes are saved to SeaweedFS (S3) and metadata to Supabase PostgreSQL.
+- Users can download any file with original filename, extension, and content type.
+- Users can rename files and folders with immediate inline validation and persistence.
+- Users can move files and folders to different target directories.
+- Users can delete files and folders; deleting a folder cascades to its descendants.
+
+#### Acceptance criteria D-003:
+- Clicking an image (png, jpeg, gif, webp, svg) displays an inline high-resolution preview with zoom/pan controls.
+- Clicking a PDF renders an inline document viewer with page navigation and zoom.
+- Clicking an audio/video file (mp4, webm, mp3, wav) renders an accessible HTML5 media player.
+- Plain text, markdown, and code files (txt, md, json, ts, js, html, css) render with syntax formatting and line numbers.
+- Unsupported file types display a clean file icon fallback with filename, file size, extension badge, and a prominent "Download" button.
+
+#### Acceptance criteria D-004:
+- Users can generate sharing links with configurable scope: Specific people, Organization members, or Anyone with the link.
+- Sharing links support two permission tiers: View (read-only) and Edit (read-write).
+- Optional link expiration dates can be set; expired links automatically deny access.
+- Accessing a valid sharing link authenticates permission and opens the shared file or folder view.
+- File owners can view active share links and revoke them at any time.
+
+#### Acceptance criteria D-005:
+- Uploading a new file with the same name into the same folder automatically increments the version number without overwriting previous versions in SeaweedFS.
+- Users can view the Version History modal listing all previous versions with version number, modifier, file size, and timestamp.
+- Users can download or preview any historical version.
+- Selecting "Restore" on a previous version makes it the active current version, creating an audit log entry.
+
+#### Acceptance criteria D-009:
+- When a user attempts to access a file, folder, or share link for which they lack permission, a clear "Request access" screen is displayed instead of the content.
+- Clicking "Request access" allows the user to submit an optional note and requested permission level (View or Edit).
+- The file owner receives an access request notification in their pending requests queue.
+- File owners can Approve (granting View or Edit access) or Deny pending requests.
+- Approving or denying immediately updates the request status in Supabase and grants the requester appropriate permission.
+- File owners can view all historical and pending access requests for their files.
 
 ---
 

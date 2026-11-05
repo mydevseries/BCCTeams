@@ -131,3 +131,29 @@ Defined in `docker-compose.yml`:
   - `MainPane.tsx`: Main content pane mounting active view and dialog overlays (< 80 lines).
   - `AvatarMenu.tsx`: Header profile avatar menu with presence options and modal triggers (< 150 lines).
   - `SearchBox.tsx`: Global search input and type-ahead popover (< 300 lines).
+
+
+---
+
+## Files & Storage System Architecture (Phase 5: D-001 through D-005, D-009)
+
+- **Storage Engine (StorageModule)**:
+  - IStorageService interface abstracts binary object storage behind upload(), download(), delete(), and exists() methods.
+  - S3-compatible client (@aws-sdk/client-s3) defaults to SeaweedFS (http://localhost:8333 in local Docker development).
+  - Resilient local disk fallback (uploads/storage/) activates automatically when the external S3 endpoint is unavailable.
+- **Relational Metadata Layer (Prisma on Supabase PostgreSQL)**:
+  - FileItem: Represents files and folders in a hierarchical self-referential tree (parentId referencing FileItem). Tracks name, size, MIME type, owner, current version, storage key, and soft-delete state.
+  - FileVersion: Immutable historical snapshots capturing prior version numbers, sizes, storage keys, and author attribution.
+  - FileShare: Permissions management supporting VIEW and EDIT privileges across SPECIFIC_PEOPLE, ORGANIZATION, and ANYONE_WITH_LINK scopes via unique shareToken strings.
+  - FileAccessRequest: Auditable access request workflow supporting requester notes, reviewer assignment, status transitions (PENDING, APPROVED, DENIED), and automatic FileShare creation upon approval.
+  - Attachment: Generic decoupled attachment entity designed for seamless integration with chat messages in Phase 2 (C-011).
+  - Row Level Security (RLS) enabled on all 5 new tables in Supabase PostgreSQL.
+- **Backend API Layer (FilesModule)**:
+  - FilesService: Implements folder navigation, multipart uploads via Multer, download streaming with Content-Disposition, rename/move operations, sharing token verification, version restoration, and access request reviews.
+  - FilesController: Guarded REST controller (/api/files) exposing endpoints for views, operations, inline previews, shares, versions, access requests, and attachment streaming.
+- **Client Implementation (pps/web/src/files)**:
+  - FilesView: Main view featuring sidebar navigation (My files, Recent, Shared with me, Access requests), folder breadcrumb trail, drag-and-drop file upload target area, file search filtering, and contextual action menus.
+  - FilePreviewModal: In-app multimedia viewer with zoom/pan controls for images, iframe PDF embedding, HTML5 video/audio playback, formatted code/text rendering, and graceful fallback for unsupported formats.
+  - ShareModal: Intuitive sharing modal with permission radio selectors, link generator, one-click clipboard copying, and active share revocation.
+  - VersionHistoryModal: Interactive audit trail of file versions with metadata, author attribution, and one-click version restoration.
+  - RequestAccessModal & AccessRequestsTab: Access gating UX enabling users to request permissions on restricted items and empowering file owners to review and approve/deny requests with pending badge counters.

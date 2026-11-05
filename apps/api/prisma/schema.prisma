@@ -43,6 +43,16 @@ model User {
   settings            UserSettings?
   conversations       ConversationParticipant[]
   messages            Message[]
+  reactions           MessageReaction[]
+  savedMessages       SavedMessage[]
+  pollVotes           PollVote[]
+  ownedFiles          FileItem[]                @relation("UserOwnedFiles")
+  fileVersions        FileVersion[]
+  sharedFiles         FileShare[]               @relation("UserSharedFiles")
+  createdShares       FileShare[]               @relation("UserCreatedShares")
+  accessRequests      FileAccessRequest[]       @relation("UserAccessRequests")
+  reviewedRequests    FileAccessRequest[]       @relation("UserReviewedRequests")
+  attachments         Attachment[]              @relation("UserAttachments")
 
   @@index([email])
 }
@@ -111,6 +121,12 @@ enum ParticipantRole {
   MEMBER
 }
 
+enum MessageImportance {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
 model Conversation {
   id           String                    @id @default(uuid())
   type         ConversationType          @default(DIRECT)
@@ -131,10 +147,12 @@ model ConversationParticipant {
   userId         String
   role           ParticipantRole @default(MEMBER)
   joinedAt       DateTime        @default(now())
+  visibleFrom    DateTime        @default(now())
   lastReadAt     DateTime        @default(now())
   isPinned       Boolean         @default(false)
   isMuted        Boolean         @default(false)
   isArchived     Boolean         @default(false)
+  isHidden       Boolean         @default(false)
 
   conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -145,18 +163,219 @@ model ConversationParticipant {
 }
 
 model Message {
-  id             String          @id @default(uuid())
+  id             String            @id @default(uuid())
   conversationId String
   senderId       String
   content        String
-  isEdited       Boolean         @default(false)
-  isDeleted      Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  importance     MessageImportance @default(NORMAL)
+  replyToId      String?
+  isEdited       Boolean           @default(false)
+  isDeleted      Boolean           @default(false)
+  isPinned       Boolean           @default(false)
+  pinnedAt       DateTime?
+  pinnedById     String?
+  scheduledAt    DateTime?
+  isSystem       Boolean           @default(false)
+  systemAction   String?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  conversation   Conversation    @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender         User            @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation      @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User              @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo        Message?          @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies        Message[]         @relation("MessageReplies")
+  reactions      MessageReaction[]
+  savedBy        SavedMessage[]
+  poll           Poll?
 
   @@index([conversationId, createdAt])
   @@index([senderId])
+  @@index([scheduledAt])
+}
+
+model MessageReaction {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+model SavedMessage {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  createdAt DateTime @default(now())
+
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model Poll {
+  id            String       @id @default(uuid())
+  messageId     String       @unique
+  question      String
+  isAnonymous   Boolean      @default(false)
+  allowMultiple Boolean      @default(false)
+  closedAt      DateTime?
+  createdAt     DateTime     @default(now())
+
+  message       Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  options       PollOption[]
+}
+
+model PollOption {
+  id        String     @id @default(uuid())
+  pollId    String
+  text      String
+
+  poll      Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  votes     PollVote[]
+}
+
+model PollVote {
+  id        String     @id @default(uuid())
+  optionId  String
+  userId    String
+  createdAt DateTime   @default(now())
+
+  option    PollOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([optionId, userId])
+  @@index([userId])
+}
+
+
+enum SharePermission {
+  VIEW
+  EDIT
+}
+
+enum ShareScope {
+  SPECIFIC_PEOPLE
+  ORGANIZATION
+  ANYONE_WITH_LINK
+}
+
+enum AccessRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
+model FileItem {
+  id             String                @id @default(uuid())
+  name           String
+  size           BigInt                @default(0)
+  mimeType       String
+  extension      String?
+  isFolder       Boolean               @default(false)
+  parentId       String?
+  ownerId        String
+  storageKey     String?
+  currentVersion Int                   @default(1)
+  isDeleted      Boolean               @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  owner          User                  @relation("UserOwnedFiles", fields: [ownerId], references: [id], onDelete: Cascade)
+  parent         FileItem?             @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children       FileItem[]            @relation("FolderHierarchy")
+  versions       FileVersion[]
+  shares         FileShare[]
+  accessRequests FileAccessRequest[]
+  attachments    Attachment[]
+
+  @@index([ownerId])
+  @@index([parentId])
+  @@index([isFolder])
+}
+
+model FileVersion {
+  id            String    @id @default(uuid())
+  fileId        String
+  versionNumber Int
+  size          BigInt
+  storageKey    String
+  createdById   String
+  changeSummary String?
+  createdAt     DateTime  @default(now())
+
+  file          FileItem  @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  createdBy     User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@unique([fileId, versionNumber])
+  @@index([fileId])
+}
+
+model FileShare {
+  id               String          @id @default(uuid())
+  fileId           String
+  sharedWithUserId String?
+  permission       SharePermission @default(VIEW)
+  scope            ShareScope      @default(SPECIFIC_PEOPLE)
+  shareToken       String?         @unique
+  createdById      String
+  expiresAt        DateTime?
+  createdAt        DateTime        @default(now())
+
+  file             FileItem        @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  sharedWithUser   User?           @relation("UserSharedFiles", fields: [sharedWithUserId], references: [id], onDelete: Cascade)
+  createdBy        User            @relation("UserCreatedShares", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([sharedWithUserId])
+  @@index([shareToken])
+}
+
+model FileAccessRequest {
+  id                  String              @id @default(uuid())
+  fileId              String
+  requesterId         String
+  requestedPermission SharePermission     @default(VIEW)
+  status              AccessRequestStatus @default(PENDING)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  note                String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  file                FileItem            @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  requester           User                @relation("UserAccessRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  reviewedBy          User?               @relation("UserReviewedRequests", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([fileId])
+  @@index([requesterId])
+  @@index([status])
+}
+
+// Generic Attachment model.
+// Note: messageId and the relation to Message will be added by the chat agent in C-011.
+model Attachment {
+  id         String    @id @default(uuid())
+  fileName   String
+  fileSize   BigInt
+  mimeType   String
+  storageKey String
+  fileId     String?
+  uploaderId String
+  createdAt  DateTime  @default(now())
+
+  file       FileItem? @relation(fields: [fileId], references: [id], onDelete: SetNull)
+  uploader   User      @relation("UserAttachments", fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@index([fileId])
+  @@index([uploaderId])
 }
