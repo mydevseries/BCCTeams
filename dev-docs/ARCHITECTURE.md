@@ -94,3 +94,18 @@ Defined in `docker-compose.yml`:
 - **Client Implementation**:
   - `DirectoryView`: Responsive multi-column grid with debounced (<150ms) search input, real-time query updates, pagination controls, and BCC brand empty states.
   - Accessible card triggers for modal colleague inspection via `MemberProfileCard`.
+
+---
+
+## Real-time Presence System Architecture (F-004)
+
+- **Backend Architecture (`PresenceModule`)**:
+  - `PresenceService`: In-memory multi-tab socket connection tracking (`userConnections`, `socketToUser`) backed by persistent database state in PostgreSQL (`Presence` table).
+  - 30-Second Grace Period: When all tabs for a user disconnect, a 30s timer is set before declaring the user `OFFLINE`. Reconnection within 30s cancels the timer, preventing transient flicker.
+  - Manual vs. Automatic Status: Manual user selections (`isManual: true`) persist through reconnection. Automatic transitions (e.g., 5-minute inactivity away) save the previous status (`savedStatus`) and automatically restore `AVAILABLE` upon resumption of user activity.
+  - Expiry Cleaner: A scheduled background interval (every 30 seconds) identifies expired custom status messages and clears them automatically.
+  - Scoped Real-time Broadcasts: Clients subscribe to individual presence channels `presence:<userId>` rather than global broadcasts, maintaining minimal overhead at scale.
+- **Client Implementation (`apps/web`)**:
+  - `PresenceContext`: Manages Socket.IO connection, `presence:init`, `presence:heartbeat`, scoped subscriptions for visible UI elements, and 5-minute user idle event listeners (`mousemove`, `keydown`, `click`, `scroll`).
+  - `StatusMessageModal`: Fluent UI v9 modal dialog allowing users to set custom status text up to 280 characters with preset expiration intervals (1h, 4h, today, this week, never) or clear it.
+  - `AppShell` & `DirectoryView`: Display real-time status badges and responsive avatar menus across all active views.

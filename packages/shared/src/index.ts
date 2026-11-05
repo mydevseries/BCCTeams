@@ -37,7 +37,16 @@ export interface PresenceState {
   status: PresenceStatus;
   statusMessage?: string | null;
   statusExpiresAt?: Date | string | null;
+  isManual?: boolean;
   lastActiveAt: Date | string;
+}
+
+export interface UpdatePresenceDto {
+  status?: PresenceStatus;
+  statusMessage?: string | null;
+  statusExpiresAt?: string | null;
+  isManual?: boolean;
+  clearMessage?: boolean;
 }
 
 export interface HealthStatus {
@@ -60,11 +69,13 @@ export interface MemberProfile extends UserProfile {
   presence?: {
     status: PresenceStatus;
     statusMessage?: string | null;
+    statusExpiresAt?: string | Date | null;
   } | null;
   localTime?: string;
 }
 
 export interface SocketEvents {
+  'presence:changed': PresenceState;
   'presence:update': PresenceState;
   'chat:message': unknown;
   'typing:status': {

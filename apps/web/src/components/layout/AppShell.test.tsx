@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { FluentProvider } from '@fluentui/react-components';
 import { bccLightTheme } from '../../theme/brand';
 import { AuthProvider } from '../../auth/AuthContext';
+import { PresenceProvider } from '../../presence/PresenceContext';
 import { ThemeProvider } from '../../theme/ThemeContext';
 import { AppShell } from './AppShell';
 
@@ -13,9 +14,11 @@ describe('AppShell Layout', () => {
       <ThemeProvider>
         <FluentProvider theme={bccLightTheme}>
           <AuthProvider>
-            <MemoryRouter initialEntries={['/chat']}>
-              <AppShell />
-            </MemoryRouter>
+            <PresenceProvider>
+              <MemoryRouter initialEntries={['/chat']}>
+                <AppShell />
+              </MemoryRouter>
+            </PresenceProvider>
           </AuthProvider>
         </FluentProvider>
       </ThemeProvider>
@@ -30,9 +33,11 @@ describe('AppShell Layout', () => {
       <ThemeProvider>
         <FluentProvider theme={bccLightTheme}>
           <AuthProvider>
-            <MemoryRouter initialEntries={['/chat']}>
-              <AppShell />
-            </MemoryRouter>
+            <PresenceProvider>
+              <MemoryRouter initialEntries={['/chat']}>
+                <AppShell />
+              </MemoryRouter>
+            </PresenceProvider>
           </AuthProvider>
         </FluentProvider>
       </ThemeProvider>

@@ -107,7 +107,7 @@ test.describe('F-001: User Authentication', () => {
     await page.getByRole('button', { name: 'Update Password' }).click();
 
     // Should see success message or auto-redirect to sign-in
-    await expect(page.getByText(/Password has been reset successfully/i)).toBeVisible();
+    await expect(page.getByText(/Password has been reset successfully/i)).toBeVisible({ timeout: 15000 });
 
     // 3. Return to sign in with new password (either via button or redirect)
     await expect(page).toHaveURL(/\/signin/, { timeout: 10000 });

@@ -70,13 +70,15 @@ model PasswordResetToken {
 }
 
 model Presence {
-  userId          String         @id
-  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status          PresenceStatus @default(AVAILABLE)
+  userId          String          @id
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status          PresenceStatus  @default(AVAILABLE)
   statusMessage   String?
   statusExpiresAt DateTime?
-  lastActiveAt    DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  isManual        Boolean         @default(false)
+  savedStatus     PresenceStatus?
+  lastActiveAt    DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }
 
 model UserSettings {

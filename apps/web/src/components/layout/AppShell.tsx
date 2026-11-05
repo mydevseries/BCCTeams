@@ -43,8 +43,10 @@ import {
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
+import { usePresence } from '../../presence/PresenceContext';
 import { ProfileModal } from '../profile/ProfileModal';
 import { SettingsModal } from '../settings/SettingsModal';
+import { StatusMessageModal } from '../presence/StatusMessageModal';
 
 const useStyles = makeStyles({
   root: {
@@ -326,11 +328,29 @@ export const AppShell: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { myPresence, setMyStatus } = usePresence();
 
-  const [presence, setPresence] = useState<'available' | 'busy' | 'dnd' | 'away' | 'offline'>('available');
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'mentions'>('all');
+
+  const getFluentBadgeStatus = (status?: string): 'available' | 'busy' | 'do-not-disturb' | 'away' | 'offline' => {
+    switch (status) {
+      case 'AVAILABLE':
+        return 'available';
+      case 'BUSY':
+        return 'busy';
+      case 'DO_NOT_DISTURB':
+        return 'do-not-disturb';
+      case 'BE_RIGHT_BACK':
+      case 'AWAY':
+        return 'away';
+      case 'OFFLINE':
+      default:
+        return 'offline';
+    }
+  };
 
   const getInitials = (name?: string) => {
     if (!name) return 'BC';
@@ -396,14 +416,6 @@ export const AppShell: React.FC = () => {
   const currentTab = navItems.find((item) =>
     location.pathname.startsWith(item.path)
   ) || (location.pathname.startsWith('/directory') ? { id: 'apps', label: 'Directory' } : navItems[1]);
-
-  const presenceStatusMap = {
-    available: { status: 'available' as const, label: 'Available' },
-    busy: { status: 'busy' as const, label: 'Busy' },
-    dnd: { status: 'do-not-disturb' as const, label: 'Do not disturb' },
-    away: { status: 'away' as const, label: 'Away' },
-    offline: { status: 'offline' as const, label: 'Appear offline' },
-  };
 
   return (
     <div className={styles.root}>
@@ -474,7 +486,7 @@ export const AppShell: React.FC = () => {
                   name={user?.displayName || 'User'}
                   image={user?.avatarUrl ? { src: user.avatarUrl } : undefined}
                   initials={getInitials(user?.displayName)}
-                  badge={{ status: presenceStatusMap[presence].status }}
+                  badge={{ status: getFluentBadgeStatus(myPresence.status) }}
                   size={32}
                 />
               </button>
@@ -489,36 +501,54 @@ export const AppShell: React.FC = () => {
                   <div style={{ fontSize: '12px', color: tokens.colorNeutralForeground3 }}>
                     {user?.email || 'user@bccteams.local'}
                   </div>
+                  {myPresence.statusMessage && (
+                    <div
+                      style={{
+                        fontSize: '12px',
+                        color: tokens.colorNeutralForeground2,
+                        marginTop: '6px',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      "{myPresence.statusMessage}"
+                    </div>
+                  )}
                 </div>
                 <Divider />
 
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setPresence('available')}
+                  onClick={() => void setMyStatus('AVAILABLE', true)}
                 >
                   Available
                 </MenuItem>
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setPresence('busy')}
+                  onClick={() => void setMyStatus('BUSY', true)}
                 >
                   Busy
                 </MenuItem>
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setPresence('dnd')}
+                  onClick={() => void setMyStatus('DO_NOT_DISTURB', true)}
                 >
                   Do not disturb
                 </MenuItem>
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setPresence('away')}
+                  onClick={() => void setMyStatus('BE_RIGHT_BACK', true)}
+                >
+                  Be right back
+                </MenuItem>
+                <MenuItem
+                  icon={<PersonRegular />}
+                  onClick={() => void setMyStatus('AWAY', true)}
                 >
                   Away
                 </MenuItem>
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setPresence('offline')}
+                  onClick={() => void setMyStatus('OFFLINE', true)}
                 >
                   Appear offline
                 </MenuItem>
@@ -526,7 +556,7 @@ export const AppShell: React.FC = () => {
 
                 <MenuItem
                   icon={<PersonRegular />}
-                  onClick={() => setIsProfileModalOpen(true)}
+                  onClick={() => setIsStatusModalOpen(true)}
                 >
                   Set status message
                 </MenuItem>
@@ -714,6 +744,10 @@ export const AppShell: React.FC = () => {
           <ProfileModal
             open={isProfileModalOpen}
             onOpenChange={setIsProfileModalOpen}
+          />
+          <StatusMessageModal
+            open={isStatusModalOpen}
+            onOpenChange={setIsStatusModalOpen}
           />
           <SettingsModal
             open={isSettingsModalOpen}

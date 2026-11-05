@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { FluentProvider } from '@fluentui/react-components';
 import { bccLightTheme } from '../theme/brand';
 import { AuthProvider } from '../auth/AuthContext';
+import { PresenceProvider } from '../presence/PresenceContext';
 import { DirectoryView } from './DirectoryView';
 
 describe('DirectoryView Component', () => {
@@ -11,9 +12,11 @@ describe('DirectoryView Component', () => {
     render(
       <FluentProvider theme={bccLightTheme}>
         <AuthProvider>
-          <MemoryRouter>
-            <DirectoryView />
-          </MemoryRouter>
+          <PresenceProvider>
+            <MemoryRouter>
+              <DirectoryView />
+            </MemoryRouter>
+          </PresenceProvider>
         </AuthProvider>
       </FluentProvider>
     );

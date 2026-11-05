@@ -26,6 +26,7 @@ import {
 } from '@fluentui/react-icons';
 import { MemberProfile } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
+import { usePresence } from '../presence/PresenceContext';
 import { MemberProfileCard } from '../components/profile/MemberProfileCard';
 import { useNavigate } from 'react-router-dom';
 
@@ -115,6 +116,7 @@ export const DirectoryView: React.FC = () => {
   const styles = useStyles();
   const { token } = useAuth();
   const navigate = useNavigate();
+  const { getUserPresence, subscribeUsers, unsubscribeUsers } = usePresence();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -198,8 +200,28 @@ export const DirectoryView: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    if (users.length > 0) {
+      const ids = users.map((u) => u.id);
+      subscribeUsers(ids);
+      return () => {
+        unsubscribeUsers(ids);
+      };
+    }
+  }, [users, subscribeUsers, unsubscribeUsers]);
+
   const handleMemberClick = (member: MemberProfile) => {
-    setSelectedMember(member);
+    const livePresence = getUserPresence(member.id);
+    const memberWithLive = {
+      ...member,
+      presence: livePresence
+        ? {
+            status: livePresence.status,
+            statusMessage: livePresence.statusMessage,
+          }
+        : member.presence,
+    };
+    setSelectedMember(memberWithLive);
     setIsMemberCardOpen(true);
   };
 
@@ -279,7 +301,7 @@ export const DirectoryView: React.FC = () => {
                     name={member.displayName}
                     image={member.avatarUrl ? { src: member.avatarUrl } : undefined}
                     initials={getInitials(member.displayName)}
-                    badge={{ status: getPresenceStatus(member.presence?.status) }}
+                    badge={{ status: getPresenceStatus(getUserPresence(member.id)?.status || member.presence?.status) }}
                     size={48}
                   />
                 }

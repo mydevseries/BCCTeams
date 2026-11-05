@@ -44,7 +44,7 @@ Last Updated: 2026-11-05
 | F-002 | User profile: name, photo, job title, department, phone | `feature/F-002` | **Verified** | 8 Jest unit tests, 2 Vitest component tests, 3 Playwright E2E tests passing 100%. Merged to master. |
 | F-003 | Organization directory: browse and search all users | `feature/F-003` | **Verified** | 3 Jest unit tests, 1 Vitest component test, 3 Playwright E2E tests passing 100%. Merged to master. |
 | UI-001 | App Shell Layout, Zero-Scroll & Theme Persistence | `fix/UI-001` | **Verified** | 36 screenshots, 13/13 Playwright E2E tests passing across 1920x1080 and 1366x768. |
-| F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | `feature/F-004` | **In Progress** | Connection tracking, 30s grace period, auto vs manual rules, presence:<userId> rooms. |
+| F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | `feature/F-004` | **Verified** | 26 Jest unit tests, 12 Vitest tests, 3 Playwright multi-user E2E tests passing 100%. Merged to master. |
 
 ---
 

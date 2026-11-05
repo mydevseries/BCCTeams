@@ -2,6 +2,23 @@
 ## [Unreleased]
 
 ### Added
+- **Feature F-004: Real-time Presence System**
+  - Backend NestJS `PresenceModule`:
+    - Real-time connection tracking per user across multiple tabs/devices via `EventsGateway` and `PresenceService`.
+    - 30-second disconnect grace period before transitioning to offline.
+    - Explicit manual status (`isManual: true`) vs. automatic status transitions with status preservation.
+    - Automatic Away state triggered after 5 minutes of client inactivity across all tabs; user activity automatically restores Available if not manually set.
+    - Scheduled status message expiry cleaner running every 30 seconds.
+    - Scoped Socket.IO subscriptions to `presence:<userId>` rooms and `presence:changed` broadcast events.
+    - REST endpoints: `GET /api/presence/me`, `PATCH /api/presence/me`, `POST /api/presence/batch`, `GET /api/presence/:userId`.
+    - Unit tests in `presence.service.spec.ts` passing (9 tests).
+  - Frontend React + Fluent UI v9:
+    - `PresenceContext`: Socket.IO client managing real-time subscriptions, heartbeats, 5-minute idle tracking, and immediate local status updates.
+    - `StatusMessageModal`: modal dialog with 280-char counter, presets (1 hour, 4 hours, today, this week, never), and clear action.
+    - Connected live presence badges and status selectors in `AppShell` avatar menu.
+    - Wired `DirectoryView` with dynamic room subscriptions for visible colleagues.
+    - Unit tests in `StatusMessageModal.test.tsx` and `AppShell.test.tsx` passing.
+    - Playwright multi-user E2E tests in `tests/e2e/f004-presence.spec.ts` verifying real-time status transitions, custom status messages with expiry, and batch queries.
 - **Feature F-003: Organization Directory**
   - Backend NestJS `UsersModule` expansion:
     - Added `getDirectory` service method with alphabetical ordering (`displayName: 'asc'`), pagination (`page`, `limit`), and multi-attribute search across name, email, job title, and department.

@@ -11,7 +11,7 @@ Feature IDs are used with /build-feature <id>.
 | F-001 | Sign up, sign in, sign out, password reset | Verified |
 | F-002 | User profile: name, photo, job title, department, phone | Verified |
 | F-003 | Organization directory: browse and search all users | Verified |
-| F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | Todo |
+| F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | Verified |
 | F-005 | Settings: theme (light/dark/high contrast), language, notification preferences | Todo |
 | F-006 | Roles: org admin, team owner, member, guest | Todo |
 | F-007 | Multiple accounts and organizations: sign into multiple accounts with fast tenant switching | Todo |
@@ -356,6 +356,20 @@ Feature IDs are used with /build-feature <id>.
 | A-007 | Keyboard shortcuts with a shortcuts help dialog | Todo |
 | A-008 | Custom notification sounds and per-activity sound toggle: assign custom alert chimes and mute specific activity triggers | Todo |
 | A-009 | Recent search history and saved queries: quickly recall recent search queries and jump to frequent contacts/channels | Todo |
+| A-010 | Search type-ahead dropdown | Todo |
+
+### Acceptance criteria — Phase 4
+
+#### Acceptance criteria A-010:
+- Typing in the top search box opens a dropdown below it, updating as I type (debounced ~150ms), with no need to press Enter.
+- Top row: the typed text with "Press Enter to see all results".
+- "People" section: up to 5 matching users with avatar, presence dot, name with the matched letters in bold, and job title. Clicking one opens their profile card (later: starts a chat).
+- "Messages", "Chats & channels" and "Files" sections appear automatically once those features exist; until then they're hidden, not shown as errors.
+- When the box is empty and focused, show recent searches and recently viewed people.
+- "Suggested" section with "Invite people to BCC Teams" (Coming soon until the invite feature exists).
+- Keyboard: Up/Down to move, Enter to open, Esc to close. Ctrl+E focuses the search box.
+- Results only include people the signed-in user is allowed to see.
+- Works in light and dark mode, follows DESIGN.md.
 
 ---
 
