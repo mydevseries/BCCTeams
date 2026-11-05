@@ -11,6 +11,7 @@ import { ChatMessage, MemberProfile } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
 import { useChat } from './ChatContext';
+import { RichTextRenderer } from './RichTextRenderer';
 
 const useStyles = makeStyles({
   container: {
@@ -312,7 +313,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               <div
                 className={`${styles.bubble} ${isOutgoing ? styles.bubbleOutgoing : styles.bubbleIncoming}`}
               >
-                {msg.content}
+                <RichTextRenderer content={msg.content} />
               </div>
             </div>
           </div>
