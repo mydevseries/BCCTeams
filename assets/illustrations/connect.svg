@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
-  <rect x="0" y="0" width="400" height="300" rx="20" fill="#F8FAFC"/>
-  <circle cx="130" cy="120" r="42" fill="#0E7C86"/>
-  <circle cx="270" cy="120" r="42" fill="#2DD4BF"/>
-  <path d="M 130 120 C 180 80, 220 80, 270 120" stroke="#0E7C86" stroke-width="4" stroke-dasharray="6,6" fill="none"/>
+  <rect x="0" y="0" width="400" height="300" rx="20" fill="#FAF5FF"/>
+  <circle cx="130" cy="120" r="42" fill="#7A3E9D"/>
+  <circle cx="270" cy="120" r="42" fill="#C084FC"/>
+  <path d="M 130 120 C 180 80, 220 80, 270 120" stroke="#7A3E9D" stroke-width="4" stroke-dasharray="6,6" fill="none"/>
   <text x="130" y="128" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="bold" font-size="20">YOU</text>
   <text x="270" y="128" text-anchor="middle" fill="#FFFFFF" font-family="sans-serif" font-weight="bold" font-size="20">TEAM</text>
-  <text x="200" y="215" text-anchor="middle" fill="#0E7C86" font-family="sans-serif" font-weight="800" font-size="22">Stay Connected Anywhere</text>
+  <text x="200" y="215" text-anchor="middle" fill="#7A3E9D" font-family="sans-serif" font-weight="800" font-size="22">Stay Connected Anywhere</text>
   <text x="200" y="240" text-anchor="middle" fill="#64748B" font-family="sans-serif" font-size="14">Direct messages, rich groups, and instant collaboration.</text>
 </svg>

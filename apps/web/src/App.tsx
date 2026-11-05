@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FluentProvider } from '@fluentui/react-components';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { bccLightTheme, bccDarkTheme, bccHighContrastTheme } from './theme/brand';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
 import { AuthProvider } from './auth/AuthContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { ChatView } from './views/ChatView';
+import { ActivityView } from './views/ActivityView';
 import { GenericSectionView } from './views/GenericSectionView';
 import { SignInView } from './views/auth/SignInView';
 import { SignUpView } from './views/auth/SignUpView';
@@ -13,18 +14,20 @@ import { ForgotPasswordView } from './views/auth/ForgotPasswordView';
 import { ResetPasswordView } from './views/auth/ResetPasswordView';
 import { DirectoryView } from './views/DirectoryView';
 
-export const App: React.FC = () => {
-  const [themeName, setThemeName] = useState<'light' | 'dark' | 'high-contrast'>('light');
-
-  const currentTheme =
-    themeName === 'dark'
-      ? bccDarkTheme
-      : themeName === 'high-contrast'
-      ? bccHighContrastTheme
-      : bccLightTheme;
+const ThemedApp: React.FC = () => {
+  const { fluentTheme } = useTheme();
 
   return (
-    <FluentProvider theme={currentTheme}>
+    <FluentProvider
+      theme={fluentTheme}
+      style={{
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <AuthProvider>
         <BrowserRouter>
           <Routes>
@@ -39,26 +42,14 @@ export const App: React.FC = () => {
               path="/"
               element={
                 <ProtectedRoute>
-                  <AppShell
-                    currentTheme={themeName}
-                    onThemeChange={(newTheme) => setThemeName(newTheme)}
-                  />
+                  <AppShell />
                 </ProtectedRoute>
               }
             >
               <Route index element={<Navigate to="/chat" replace />} />
               <Route path="chat" element={<ChatView />} />
               <Route path="directory" element={<DirectoryView />} />
-              <Route
-                path="activity"
-                element={
-                  <GenericSectionView
-                    title="Activity Feed"
-                    description="Stay up to date with mentions, replies, reactions, and team updates."
-                    illustration="/illustrations/empty-activity.svg"
-                  />
-                }
-              />
+              <Route path="activity" element={<ActivityView />} />
               <Route
                 path="teams"
                 element={
@@ -66,6 +57,7 @@ export const App: React.FC = () => {
                     title="Teams & Channels"
                     description="Collaborate in dedicated spaces with standard, private, and shared channels."
                     illustration="/illustrations/empty-teams.svg"
+                    featureId="T-001"
                     actionText="Create or Join Team"
                   />
                 }
@@ -77,6 +69,7 @@ export const App: React.FC = () => {
                     title="Calendar"
                     description="Schedule, manage, and join video meetings and appointments."
                     illustration="/illustrations/empty-calendar.svg"
+                    featureId="W-001"
                     actionText="New Meeting"
                   />
                 }
@@ -88,6 +81,7 @@ export const App: React.FC = () => {
                     title="Calls"
                     description="High-definition 1:1 and group audio/video calls with screen sharing."
                     illustration="/illustrations/empty-chat.svg"
+                    featureId="K-001"
                     actionText="Make a Call"
                   />
                 }
@@ -99,7 +93,7 @@ export const App: React.FC = () => {
                     title="Files"
                     description="Access your recent files, team libraries, and shared documents securely."
                     illustration="/illustrations/empty-files.svg"
-                    actionText="Upload File"
+                    featureId="D-001"
                   />
                 }
               />
@@ -107,30 +101,28 @@ export const App: React.FC = () => {
                 path="apps"
                 element={
                   <GenericSectionView
-                    title="Apps & Integrations"
-                    description="Extend your workspace with automated workflows, task boards, and bots."
-                    illustration="/illustrations/connect.svg"
-                    actionText="Browse Apps"
-                  />
-                }
-              />
-              <Route
-                path="settings"
-                element={
-                  <GenericSectionView
-                    title="Settings"
-                    description="Configure appearance themes, notification sounds, and account preferences."
-                    illustration="/illustrations/welcome.svg"
+                    title="Apps"
+                    description="Extend BCC Teams with internal integrations and productivity workflows."
+                    illustration="/illustrations/empty-search.svg"
+                    featureId="P-001"
                   />
                 }
               />
             </Route>
 
-            {/* Catch-all */}
-            <Route path="*" element={<Navigate to="/chat" replace />} />
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </BrowserRouter>
       </AuthProvider>
     </FluentProvider>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <ThemedApp />
+    </ThemeProvider>
   );
 };

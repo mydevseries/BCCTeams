@@ -10,7 +10,7 @@ BCC Teams is BCC's internal collaboration platform: unified chat, teams, channel
 +-----------------------------------------------------------------------------------+
 |                                  apps/web                                         |
 |  React 18 + Vite + TypeScript + Fluent UI React v9 + React Router v6              |
-|  Theme: Custom BCC Teal Brand Ramp (#0E7C86) for Light, Dark, High Contrast       |
+|  Theme: Custom BCC Violet Brand Ramp (#7A3E9D) for Light, Dark, High Contrast     |
 +-----------------------------------------------------------------------------------+
              | REST APIs                                        ^ WebSocket (Socket.IO)
              v                                                  |
@@ -36,7 +36,7 @@ BCC Teams is BCC's internal collaboration platform: unified chat, teams, channel
 ## Monorepo Layout
 
 - `apps/web`: Frontend single-page application built on React 18, Vite, and Microsoft Fluent UI React v9 (`@fluentui/react-components`).
-  - `src/theme/brand.ts`: 16-step brand ramp generated from BCC Primary Brand Teal (`#0E7C86`).
+  - `src/theme/brand.ts`: 16-step brand ramp generated from BCC Primary Brand Violet (`#7A3E9D`).
   - `src/components/layout/AppShell.tsx`: Standard four-region shell: Top bar (48px), Left app bar (68px), Resizable list pane (320px), and Main content pane.
   - `src/views/`: Routed modular views (`ChatView`, `DirectoryView`, `GenericSectionView`).
 - `apps/api`: Modular NestJS backend application with global validation and CORS.

@@ -52,3 +52,17 @@
 - **Features affected:** M-014 (Live captions), M-023 (Transcript without recording), M-038 (Video meeting recap)
 - **Decision:** Employ **faster-whisper** / **whisper.cpp** (OpenAI Whisper architecture, MIT license) deployed as a streaming audio worker connected directly to the LiveKit audio track egress or WebRTC audio bridge.
 - **Reason:** Delivers accurate multi-language transcription and timestamped diarization completely on-premises with no per-minute cloud billing.
+
+---
+
+### 8. BCC Brand Identity: Transition from Teal (#0E7C86) to Violet (#7A3E9D)
+- **Features affected:** Brand identity, Design system, App Shell, Theme, Icons, Illustrations
+- **Decision:** Change BCC Teams brand color from Teal (`#0E7C86`) to custom Violet (`#7A3E9D`). Completely avoid Microsoft Teams purple hex values (`#6264A7`, `#5B5FC7`, `#464775`). Implement an original 16-step Fluent brand ramp in `apps/web/src/theme/brand.ts`, ensuring dark mode text and links use lighter steps (e.g. step 110 `#C78BE7` and 120 `#D5A2EF`) for WCAG AA compliance (>5.7:1 contrast ratio against dark backgrounds `#292929` and `#1f1f1f`). All logo assets, badges, icons, and illustrations updated to the violet palette.
+- **Reason:** Delivers an original, regal, and modern BCC corporate identity with excellent visual clarity, WCAG AA accessibility compliance in both light and dark themes, and complete separation from proprietary Microsoft brand assets.
+
+---
+
+### 9. Managed Cloud Database via Supabase PostgreSQL
+- **Features affected:** Persistence, Users, Tokens, Presence, UserSettings, Monorepo Data Layer
+- **Decision:** Connect NestJS API directly to cloud-managed Supabase PostgreSQL instance (`ap-northeast-2` region). Utilize Supabase's transaction pooler (port 6543) with PgBouncer for API runtime queries and the session pooler (port 5432) via Prisma `directUrl` for schema push and migrations.
+- **Reason:** Provides reliable, highly available cloud-hosted PostgreSQL with built-in connection pooling, automated backups, and row-level security capabilities without requiring a local database daemon on developer machines.

@@ -3,12 +3,9 @@ import {
   makeStyles,
   tokens,
   shorthands,
-  Title3,
-  Body1,
+  Badge,
   Caption1,
-  Button,
 } from '@fluentui/react-components';
-import { SendRegular } from '@fluentui/react-icons';
 
 const useStyles = makeStyles({
   root: {
@@ -16,50 +13,73 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     height: '100%',
     width: '100%',
+    overflow: 'hidden',
+    backgroundColor: tokens.colorNeutralBackground1,
   },
   header: {
     height: '48px',
+    minHeight: '48px',
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'space-between',
     ...shorthands.padding('0', tokens.spacingHorizontalL),
     ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
     backgroundColor: tokens.colorNeutralBackground1,
+    flexShrink: 0,
   },
-  content: {
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalM),
+  },
+  chatTitle: {
+    fontSize: tokens.fontSizeBase400,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+  },
+  contentScroll: {
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
     alignItems: 'center',
-    ...shorthands.padding(tokens.spacingVerticalXXL),
+    justifyContent: 'center',
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    ...shorthands.padding(tokens.spacingVerticalXXL, tokens.spacingHorizontalL),
+  },
+  innerContainer: {
+    maxWidth: '560px',
+    width: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
     textAlign: 'center',
     ...shorthands.gap(tokens.spacingVerticalM),
   },
   emptyImg: {
-    width: '240px',
-    height: '160px',
+    width: '220px',
+    height: '150px',
     marginBottom: tokens.spacingVerticalM,
   },
-  composerArea: {
-    height: '64px',
-    ...shorthands.borderTop('1px', 'solid', tokens.colorNeutralStroke2),
-    ...shorthands.padding('0', tokens.spacingHorizontalL),
+  title: {
+    fontSize: tokens.fontSizeBase600,
+    fontWeight: tokens.fontWeightSemibold,
+    color: tokens.colorNeutralForeground1,
+  },
+  description: {
+    fontSize: tokens.fontSizeBase300,
+    color: tokens.colorNeutralForeground2,
+    lineHeight: '22px',
+  },
+  badgeCard: {
     display: 'flex',
     alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalM),
-    backgroundColor: tokens.colorNeutralBackground1,
-  },
-  mockInput: {
-    flexGrow: 1,
-    height: '38px',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     backgroundColor: tokens.colorNeutralBackground2,
     ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    marginTop: tokens.spacingVerticalS,
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.padding('0', tokens.spacingHorizontalM),
-    color: tokens.colorNeutralForeground3,
-    fontSize: '14px',
   },
 });
 
@@ -68,31 +88,35 @@ export const ChatView: React.FC = () => {
 
   return (
     <div className={styles.root}>
-      <div className={styles.header}>
-        <Title3>General Chat</Title3>
-      </div>
+      {/* Main pane header */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <span className={styles.chatTitle}>Chat</span>
+          <Badge appearance="tint" color="brand">Coming soon (C-001)</Badge>
+        </div>
+      </header>
 
-      <div className={styles.content}>
-        <img
-          src="/illustrations/empty-chat.svg"
-          alt="Start a conversation"
-          className={styles.emptyImg}
-        />
-        <Title3>Welcome to BCC Teams Chat</Title3>
-        <Body1 style={{ maxWidth: '420px', color: tokens.colorNeutralForeground2 }}>
-          Send messages, share documents, start calls, and collaborate seamlessly
-          with your team.
-        </Body1>
-        <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-          Type a message below to start the conversation.
-        </Caption1>
-      </div>
+      {/* Main pane content - clean empty state without fake composer */}
+      <div className={styles.contentScroll}>
+        <div className={styles.innerContainer}>
+          <img
+            src="/illustrations/empty-chat.svg"
+            alt="BCC Teams Chat"
+            className={styles.emptyImg}
+          />
+          <div className={styles.title}>Welcome to BCC Teams Chat</div>
+          <div className={styles.description}>
+            Real-time 1:1 and group messaging, rich text composer, emoji reactions,
+            threaded replies, and file attachments will be available starting with Feature C-001.
+          </div>
 
-      <div className={styles.composerArea}>
-        <div className={styles.mockInput}>Type a new message...</div>
-        <Button appearance="primary" icon={<SendRegular />}>
-          Send
-        </Button>
+          <div className={styles.badgeCard}>
+            <Badge appearance="tint" color="brand">Phase 2</Badge>
+            <Caption1 style={{ color: tokens.colorNeutralForeground2 }}>
+              Feature C-001: 1:1 Direct Messaging launching next
+            </Caption1>
+          </div>
+        </div>
       </div>
     </div>
   );

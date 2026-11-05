@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { test, expect } from '@playwright/test';
 import { PrismaClient } from '@prisma/client';
 
@@ -107,7 +108,8 @@ test.describe('F-003: Organization Directory', () => {
     await page.getByRole('button', { name: 'Sign In' }).click();
     await expect(page).toHaveURL(/\/chat/);
 
-    await page.getByRole('button', { name: /^Directory$/i }).click();
+    await page.getByRole('button', { name: 'User Profile' }).click();
+    await page.getByRole('menuitem', { name: /Organization directory/i }).click();
     await expect(page).toHaveURL(/\/directory/);
     await expect(page.locator('h1')).toHaveText('Organization Directory');
   }
@@ -123,6 +125,7 @@ test.describe('F-003: Organization Directory', () => {
 
     // 2. Verify all user display names on the current page are strictly in alphabetical order
     const memberCards = page.locator('[role="button"][aria-label^="Member: "]');
+    await expect(memberCards.first()).toBeVisible();
     const count = await memberCards.count();
     expect(count).toBeGreaterThan(0);
     const names: string[] = [];

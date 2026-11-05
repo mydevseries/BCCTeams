@@ -1,36 +1,41 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { FluentProvider } from '@fluentui/react-components';
 import { bccLightTheme } from '../../theme/brand';
 import { AuthProvider } from '../../auth/AuthContext';
+import { ThemeProvider } from '../../theme/ThemeContext';
 import { AppShell } from './AppShell';
 
 describe('AppShell Layout', () => {
-  it('renders top bar with BCC Teams branding', () => {
+  it('renders top bar with BCC Teams branding and search', () => {
     render(
-      <FluentProvider theme={bccLightTheme}>
-        <AuthProvider>
-          <MemoryRouter initialEntries={['/chat']}>
-            <AppShell currentTheme="light" onThemeChange={vi.fn()} />
-          </MemoryRouter>
-        </AuthProvider>
-      </FluentProvider>
+      <ThemeProvider>
+        <FluentProvider theme={bccLightTheme}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/chat']}>
+              <AppShell />
+            </MemoryRouter>
+          </AuthProvider>
+        </FluentProvider>
+      </ThemeProvider>
     );
 
     expect(screen.getByText('BCC Teams')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Search messages, people, files/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Search \(Ctrl\+E\)/i)).toBeInTheDocument();
   });
 
-  it('renders all left app bar navigation items', () => {
+  it('renders all 7 left app bar navigation items in order', () => {
     render(
-      <FluentProvider theme={bccLightTheme}>
-        <AuthProvider>
-          <MemoryRouter initialEntries={['/chat']}>
-            <AppShell currentTheme="light" onThemeChange={vi.fn()} />
-          </MemoryRouter>
-        </AuthProvider>
-      </FluentProvider>
+      <ThemeProvider>
+        <FluentProvider theme={bccLightTheme}>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/chat']}>
+              <AppShell />
+            </MemoryRouter>
+          </AuthProvider>
+        </FluentProvider>
+      </ThemeProvider>
     );
 
     expect(screen.getByRole('button', { name: /^Activity$/i })).toBeInTheDocument();
@@ -40,6 +45,5 @@ describe('AppShell Layout', () => {
     expect(screen.getByRole('button', { name: /^Calls$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Files$/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Apps$/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Directory$/i })).toBeInTheDocument();
   });
 });

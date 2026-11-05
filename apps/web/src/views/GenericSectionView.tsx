@@ -6,6 +6,7 @@ import {
   Title3,
   Body1,
   Button,
+  Badge,
 } from '@fluentui/react-components';
 
 const useStyles = makeStyles({
@@ -43,6 +44,7 @@ interface GenericSectionViewProps {
   title: string;
   description: string;
   illustration: string;
+  featureId?: string;
   actionText?: string;
   onAction?: () => void;
 }
@@ -51,6 +53,7 @@ export const GenericSectionView: React.FC<GenericSectionViewProps> = ({
   title,
   description,
   illustration,
+  featureId,
   actionText,
   onAction,
 }) => {
@@ -64,6 +67,11 @@ export const GenericSectionView: React.FC<GenericSectionViewProps> = ({
       <div className={styles.content}>
         <img src={illustration} alt={title} className={styles.img} />
         <Title3>{title}</Title3>
+        {featureId && (
+          <Badge appearance="tint" color="brand">
+            Coming soon ({featureId})
+          </Badge>
+        )}
         <Body1 style={{ maxWidth: '420px', color: tokens.colorNeutralForeground2 }}>
           {description}
         </Body1>

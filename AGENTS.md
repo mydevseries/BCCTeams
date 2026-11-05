@@ -8,7 +8,7 @@ open-source libraries.
 ## Tech stack (fixed — do not change without an entry in dev-docs/DECISIONS.md)
 - Monorepo: pnpm workspaces + Turborepo
 - apps/web: React 18 + Vite + TypeScript + Fluent UI React v9 (@fluentui/react-components)
-  + Fluent System Icons (@fluentui/react-icons)
+  + Fluent System Icons (@fluentui/react-icons). Brand color: BCC Violet (#7A3E9D) defined in apps/web/src/theme/brand.ts
 - apps/api: Node.js + NestJS + TypeScript, REST + WebSocket (Socket.IO)
 - Database: PostgreSQL with Prisma ORM. Cache/pub-sub/presence: Redis
 - Files: SeaweedFS (S3-compatible, Apache-2.0)

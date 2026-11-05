@@ -1,18 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 240" width="320" height="240">
   <defs>
     <linearGradient id="folderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#149AA7"/>
-      <stop offset="100%" stop-color="#0E7C86"/>
+      <stop offset="0%" stop-color="#8E4DB5"/>
+      <stop offset="100%" stop-color="#7A3E9D"/>
     </linearGradient>
   </defs>
-  <circle cx="160" cy="120" r="90" fill="#F0FDFA"/>
+  <circle cx="160" cy="120" r="90" fill="#FAF5FF"/>
   <!-- Folder -->
   <g transform="translate(160, 120)">
     <!-- Back folder flap -->
-    <path d="M -50 -30 L -15 -30 L -5 -18 L 50 -18 C 55 -18, 58 -15, 58 -10 L 58 35 C 58 40, 55 43, 50 43 L -50 43 C -55 43, -58 40, -58 35 L -58 -22 C -58 -27, -55 -30, -50 -30 Z" fill="#0D9488" opacity="0.6"/>
+    <path d="M -50 -30 L -15 -30 L -5 -18 L 50 -18 C 55 -18, 58 -15, 58 -10 L 58 35 C 58 40, 55 43, 50 43 L -50 43 C -55 43, -58 40, -58 35 L -58 -22 C -58 -27, -55 -30, -50 -30 Z" fill="#8B48B2" opacity="0.6"/>
     <!-- Clean sheet of paper -->
-    <path d="M -35 -22 L 20 -22 L 35 -7 L 35 32 L -35 32 Z" fill="#FFFFFF" stroke="#CCFBF1" stroke-width="2"/>
-    <path d="M 20 -22 L 20 -7 L 35 -7 Z" fill="#E6FFFA"/>
+    <path d="M -35 -22 L 20 -22 L 35 -7 L 35 32 L -35 32 Z" fill="#FFFFFF" stroke="#E9D5FF" stroke-width="2"/>
+    <path d="M 20 -22 L 20 -7 L 35 -7 Z" fill="#FAF5FF"/>
     <!-- Front folder flap -->
     <path d="M -60 -8 L 60 -8 L 50 45 L -50 45 Z" fill="url(#folderGrad)"/>
     <!-- Upload cloud arrow -->

@@ -31,7 +31,7 @@ interface AuthenticatedRequest extends Request {
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @Get('me')
   async getMe(@Req() req: AuthenticatedRequest): Promise<UserProfile> {
