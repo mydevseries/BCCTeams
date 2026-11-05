@@ -109,3 +109,23 @@ Defined in `docker-compose.yml`:
   - `PresenceContext`: Manages Socket.IO connection, `presence:init`, `presence:heartbeat`, scoped subscriptions for visible UI elements, and 5-minute user idle event listeners (`mousemove`, `keydown`, `click`, `scroll`).
   - `StatusMessageModal`: Fluent UI v9 modal dialog allowing users to set custom status text up to 280 characters with preset expiration intervals (1h, 4h, today, this week, never) or clear it.
   - `AppShell` & `DirectoryView`: Display real-time status badges and responsive avatar menus across all active views.
+
+---
+
+## Search Type-Ahead Dropdown & Modular Shell Architecture (A-010)
+
+- **Search Type-Ahead Dropdown (`SearchBox`)**:
+  - Live query debouncing (~150ms) querying `/api/users?query=...&limit=5`.
+  - Top action item routing to directory search on `Enter` or click.
+  - People section displaying matched colleagues with initials/photo avatar, real-time presence dot, highlighted substring matches, and job title.
+  - Profile inspection integration: selecting a person opens `MemberProfileCard` and registers them in localStorage recent people.
+  - Focused empty state displaying customizable recent searches and recent people.
+  - Full keyboard accessibility: `ArrowDown`/`ArrowUp` item cursor navigation, `Enter` selection trigger, `Escape` blur, and `Ctrl+E` global shortcut.
+- **Modular App Shell Decomposition**:
+  - `AppShell.tsx`: Root shell container (< 80 lines).
+  - `TopBar.tsx`: Top header (48px) with brand title, history navigation, SearchBox, and AvatarMenu (< 150 lines).
+  - `AppBar.tsx`: Left rail (68px) with 7 primary navigation targets and active teal indicator (< 175 lines).
+  - `ListPane.tsx`: 320px resizable secondary pane with filter pills and active route listings (< 270 lines).
+  - `MainPane.tsx`: Main content pane mounting active view and dialog overlays (< 80 lines).
+  - `AvatarMenu.tsx`: Header profile avatar menu with presence options and modal triggers (< 150 lines).
+  - `SearchBox.tsx`: Global search input and type-ahead popover (< 300 lines).

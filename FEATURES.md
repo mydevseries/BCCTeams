@@ -356,7 +356,7 @@ Feature IDs are used with /build-feature <id>.
 | A-007 | Keyboard shortcuts with a shortcuts help dialog | Todo |
 | A-008 | Custom notification sounds and per-activity sound toggle: assign custom alert chimes and mute specific activity triggers | Todo |
 | A-009 | Recent search history and saved queries: quickly recall recent search queries and jump to frequent contacts/channels | Todo |
-| A-010 | Search type-ahead dropdown | Todo |
+| A-010 | Search type-ahead dropdown | Partial |
 
 ### Acceptance criteria — Phase 4
 

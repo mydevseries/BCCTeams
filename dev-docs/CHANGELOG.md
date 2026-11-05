@@ -2,6 +2,27 @@
 ## [Unreleased]
 
 ### Added
+- **Feature A-010: Search Type-Ahead Dropdown (Partial - People)**
+  - Built `SearchBox.tsx`:
+    - Real-time debounced (<150ms) directory querying without pressing Enter.
+    - Top row displaying active query with "Press Enter to see all results" navigation to `/directory?query=...`.
+    - People section: up to 5 matching colleagues with initials/photo avatar, real-time presence dot, bold matched character highlighting, and job title/department.
+    - Clicking a colleague opens modal `MemberProfileCard` and records them in localStorage `bcc_recent_people`.
+    - Focused empty state displays "Recent Searches" with one-click recall/dismissal and "Recent People".
+    - "Suggested" section with "Invite people to BCC Teams" badge ("Coming soon").
+    - Keyboard navigation: `Up`/`Down` arrows to navigate active items, `Enter` to open selection, `Esc` to close, `Ctrl+E` global shortcut to focus.
+    - Strict compliance with Fluent UI design tokens and theme modes (Light/Dark/System).
+    - Unit test suite `SearchBox.test.tsx` (3 tests) and Playwright E2E suite `a010-search-typeahead.spec.ts` (2 tests) passing 100%.
+- **Architecture Refactoring: AppShell Modular Decomposition**
+  - Refactored monolithic `AppShell.tsx` (760 lines) into dedicated subcomponents all strictly under 300 lines:
+    - `TopBar.tsx` (141 lines): Branding, back/forward history controls, global SearchBox, and AvatarMenu.
+    - `AppBar.tsx` (170 lines): 68px left rail with 7 navigation buttons, active teal indicator, and icon regular/filled switching.
+    - `ListPane.tsx` (262 lines): 320px resizable panel with header, filter pills (All, Unread, Mentions), and active section items.
+    - `MainPane.tsx` (73 lines): Flexible outlet container with centralized modal state mounting (`ProfileModal`, `StatusMessageModal`, `SettingsModal`, `MemberProfileCard`).
+    - `AvatarMenu.tsx` (147 lines): Top-right user avatar with live presence badge, user profile summary, status menu, modal triggers, and sign out.
+    - `SearchBox.tsx` (297 lines): Global type-ahead search with dropdown listbox and keyboard shortcuts.
+    - `AppShell.tsx` (70 lines): Root composition container.
+  - 100% test pass rate across all 18 end-to-end and 15 component tests with zero regressions.
 - **Feature F-004: Real-time Presence System**
   - Backend NestJS `PresenceModule`:
     - Real-time connection tracking per user across multiple tabs/devices via `EventsGateway` and `PresenceService`.

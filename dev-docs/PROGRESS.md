@@ -45,14 +45,15 @@ Last Updated: 2026-11-05
 | F-003 | Organization directory: browse and search all users | `feature/F-003` | **Verified** | 3 Jest unit tests, 1 Vitest component test, 3 Playwright E2E tests passing 100%. Merged to master. |
 | UI-001 | App Shell Layout, Zero-Scroll & Theme Persistence | `fix/UI-001` | **Verified** | 36 screenshots, 13/13 Playwright E2E tests passing across 1920x1080 and 1366x768. |
 | F-004 | Presence: Available, Busy, Do not disturb, Be right back, Away, Offline; automatic Away after inactivity; custom status message with expiry | `feature/F-004` | **Verified** | 26 Jest unit tests, 12 Vitest tests, 3 Playwright multi-user E2E tests passing 100%. Merged to master. |
+| A-010 | Search type-ahead dropdown | `feature/A-010` | **Partial** | People section, recent searches/people, suggested invite, Ctrl+E shortcut, Up/Down/Enter keyboard navigation. AppShell decomposed into TopBar, AppBar, ListPane, MainPane, AvatarMenu, SearchBox (all < 300 lines). 15 Vitest unit tests, 2 Playwright E2E tests passing 100%. |
 
 ---
 
 ## Active Work
 
-- **Current Step:** Completed UI-001 & Step 1 cleanup; merging to master and starting F-004 (Presence System)
-- **Active Branch:** `feature/F-004`
-- **Next Up:** Feature F-005: Settings (theme, language, notification preferences)
+- **Current Step:** Completed A-010 (Partial) and AppShell decomposition (< 300 lines per component); proceeding to F-005 (Settings).
+- **Active Branch:** `feature/A-010`
+- **Next Up:** Feature F-005: Settings (theme, language, notification preferences). Then Core Chat (C-001 through C-011). F-006 skipped per instruction.
 
 ---
 
