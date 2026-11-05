@@ -814,6 +814,7 @@ export class ChatService {
     });
 
     // Mark conversation read for this user
+    const readAt = new Date();
     await this.prisma.conversationParticipant.update({
       where: {
         conversationId_userId: {
@@ -822,8 +823,14 @@ export class ChatService {
         },
       },
       data: {
-        lastReadAt: new Date(),
+        lastReadAt: readAt,
       },
+    });
+
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:read', {
+      conversationId,
+      userId,
+      lastReadAt: readAt,
     });
 
     return messages;
@@ -928,6 +935,7 @@ export class ChatService {
       throw new ForbiddenException('You are not a participant in this conversation');
     }
 
+    const readAt = new Date();
     await this.prisma.conversationParticipant.update({
       where: {
         conversationId_userId: {
@@ -936,8 +944,14 @@ export class ChatService {
         },
       },
       data: {
-        lastReadAt: new Date(),
+        lastReadAt: readAt,
       },
+    });
+
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:read', {
+      conversationId,
+      userId,
+      lastReadAt: readAt,
     });
 
     return { success: true };

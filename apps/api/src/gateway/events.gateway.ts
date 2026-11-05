@@ -103,6 +103,23 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'room:left', room };
   }
 
+  @SubscribeMessage('chat:typing')
+  handleChatTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody()
+    data: {
+      conversationId: string;
+      userId: string;
+      displayName: string;
+      isTyping: boolean;
+    },
+  ) {
+    if (data?.conversationId) {
+      client.to(`chat:${data.conversationId}`).emit('chat:typing', data);
+    }
+    return { status: 'typing_relayed' };
+  }
+
   emitToRoom(room: string, event: string, payload: unknown) {
     if (this.server) {
       this.server.to(room).emit(event, payload);

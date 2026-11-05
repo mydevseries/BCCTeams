@@ -6,10 +6,11 @@ import {
   Avatar,
   AvatarGroup,
 } from '@fluentui/react-components';
-import { PeopleRegular } from '@fluentui/react-icons';
+import { CheckmarkRegular } from '@fluentui/react-icons';
 import { ChatMessage, MemberProfile } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
+import { useChat } from './ChatContext';
 
 const useStyles = makeStyles({
   container: {
@@ -81,6 +82,10 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase100,
     color: tokens.colorNeutralForeground3,
   },
+  statusReceipt: {
+    display: 'inline-flex',
+    alignItems: 'center',
+  },
   bubble: {
     ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
     ...shorthands.borderRadius(tokens.borderRadiusMedium),
@@ -121,6 +126,16 @@ const useStyles = makeStyles({
     fontSize: tokens.fontSizeBase100,
     color: tokens.colorNeutralForeground4,
   },
+  typingRow: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+    fontStyle: 'italic',
+    alignSelf: 'flex-start',
+  },
 });
 
 interface MessageListProps {
@@ -139,11 +154,16 @@ export const MessageList: React.FC<MessageListProps> = ({
   const styles = useStyles();
   const { user } = useAuth();
   const { getUserPresence } = usePresence();
+  const { activeConversation, typingUsers } = useChat();
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const typingNames = Object.values(typingUsers);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+    if (typeof bottomRef.current?.scrollIntoView === 'function') {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages.length, typingNames.length]);
 
   const getFluentBadgeStatus = (status?: string): 'available' | 'busy' | 'do-not-disturb' | 'away' | 'offline' => {
     switch (status) {
@@ -217,7 +237,6 @@ export const MessageList: React.FC<MessageListProps> = ({
   return (
     <div className={styles.container} role="log" aria-label="Chat messages" aria-live="polite">
       {messages.map((msg) => {
-        // System message rendering
         if (msg.isSystem) {
           return (
             <div key={msg.id} className={styles.systemMessageRow} role="status">
@@ -232,6 +251,15 @@ export const MessageList: React.FC<MessageListProps> = ({
           msg.sender?.displayName ||
           (isOutgoing ? user?.displayName : recipient?.displayName) ||
           'Colleague';
+
+        // Check if message has been read by another participant
+        const isRead =
+          isOutgoing &&
+          Boolean(
+            activeConversation?.participants
+              .filter((p) => p.userId !== user?.id)
+              .some((p) => new Date(p.lastReadAt) >= new Date(msg.createdAt))
+          );
 
         return (
           <div
@@ -248,6 +276,37 @@ export const MessageList: React.FC<MessageListProps> = ({
               <div className={`${styles.messageHeader} ${isOutgoing ? styles.messageHeaderOutgoing : ''}`}>
                 <span className={styles.senderName}>{senderDisplayName}</span>
                 <span className={styles.timestamp}>{formatMessageTime(msg.createdAt)}</span>
+
+                {isOutgoing && (
+                  <span
+                    className={styles.statusReceipt}
+                    aria-label={isRead ? 'Read' : 'Sent'}
+                    title={isRead ? 'Read by recipient' : 'Sent'}
+                  >
+                    {isRead ? (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          color: tokens.colorBrandForeground1,
+                        }}
+                      >
+                        <CheckmarkRegular fontSize={13} />
+                        <CheckmarkRegular fontSize={13} style={{ marginLeft: -6 }} />
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          color: tokens.colorNeutralForeground4,
+                        }}
+                      >
+                        <CheckmarkRegular fontSize={13} />
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
 
               <div
@@ -259,6 +318,14 @@ export const MessageList: React.FC<MessageListProps> = ({
           </div>
         );
       })}
+
+      {/* Typing indicator */}
+      {typingNames.length > 0 && (
+        <div className={styles.typingRow} role="status" aria-live="polite">
+          <span>{typingNames.join(', ')} {typingNames.length > 1 ? 'are' : 'is'} typing...</span>
+        </div>
+      )}
+
       <div ref={bottomRef} />
     </div>
   );

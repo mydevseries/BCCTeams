@@ -59,14 +59,32 @@ interface MessageComposerProps {
 
 export const MessageComposer: React.FC<MessageComposerProps> = ({ disabled = false }) => {
   const styles = useStyles();
-  const { sendMessage } = useChat();
+  const { sendMessage, sendTyping } = useChat();
   const [text, setText] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimerRef = useRef<any>(null);
+
+  const handleTextChange = (val: string) => {
+    setText(val);
+    if (!disabled) {
+      sendTyping(true);
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+      typingTimerRef.current = setTimeout(() => {
+        sendTyping(false);
+      }, 3000);
+    }
+  };
 
   const handleSend = async () => {
     if (!text.trim() || disabled) return;
     const content = text;
     setText('');
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+    }
+    sendTyping(false);
     await sendMessage(content);
     textareaRef.current?.focus();
   };
@@ -87,7 +105,7 @@ export const MessageComposer: React.FC<MessageComposerProps> = ({ disabled = fal
           placeholder={disabled ? 'Select a recipient to start messaging' : 'Type a new message...'}
           value={text}
           disabled={disabled}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => handleTextChange(e.target.value)}
           onKeyDown={handleKeyDown}
           rows={1}
           aria-label="Message input"

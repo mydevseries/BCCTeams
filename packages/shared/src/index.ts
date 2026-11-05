@@ -108,10 +108,16 @@ export interface SocketEvents {
   'presence:changed': PresenceState;
   'presence:update': PresenceState;
   'chat:message': unknown;
-  'typing:status': {
-    chatId: string;
+  'chat:typing': {
+    conversationId: string;
     userId: string;
+    displayName: string;
     isTyping: boolean;
+  };
+  'chat:read': {
+    conversationId: string;
+    userId: string;
+    lastReadAt: string | Date;
   };
 }
 

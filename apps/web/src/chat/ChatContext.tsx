@@ -32,6 +32,9 @@ interface ChatContextType {
   toggleMute: (conversationId: string) => Promise<void>;
   hideConversation: (conversationId: string) => Promise<void>;
   markAsUnread: (conversationId: string) => Promise<void>;
+  markAsRead: (conversationId: string) => Promise<void>;
+  typingUsers: Record<string, string>;
+  sendTyping: (isTyping: boolean) => void;
   sendMessage: (content: string) => Promise<void>;
   loadConversations: () => Promise<void>;
 }
@@ -49,6 +52,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const typingTimersRef = useRef<Record<string, any>>({});
 
   const activeConvIdRef = useRef<string | null>(null);
   activeConvIdRef.current = activeConversationId;
@@ -88,6 +93,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loadConversations();
   }, [loadConversations]);
 
+  // Mark as read
+  const markAsRead = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      await fetch(`/api/chat/conversations/${conversationId}/read`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setConversations((prev) =>
+        prev.map((c) => (c.id === conversationId ? { ...c, unreadCount: 0 } : c))
+      );
+    } catch (err) {
+      console.error('Failed to mark conversation read', err);
+    }
+  }, [token]);
+
   // Load messages when active conversation changes
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!token) return;
@@ -109,18 +130,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const setActiveConversationId = useCallback((id: string | null) => {
     setActiveConversationIdState(id);
+    setTypingUsers({});
     if (id) {
       setIsDraft(false);
       setSelectedRecipients([]);
       setDraftTitle('');
       loadMessages(id);
+      markAsRead(id);
       if (socket && socket.connected) {
         socket.emit('room:join', `chat:${id}`);
       }
     } else {
       setMessages([]);
     }
-  }, [loadMessages, socket]);
+  }, [loadMessages, markAsRead, socket]);
 
   // Start draft new chat
   const startDraftChat = useCallback((recipient?: MemberProfile | null) => {
@@ -348,6 +371,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
+  // Send typing indicator
+  const sendTyping = useCallback(
+    (isTyping: boolean) => {
+      if (!socket || !activeConversationId || !user) return;
+      socket.emit('chat:typing', {
+        conversationId: activeConversationId,
+        userId: user.id,
+        displayName: user.displayName,
+        isTyping,
+      });
+    },
+    [socket, activeConversationId, user],
+  );
+
   // Send message
   const sendMessage = useCallback(async (content: string) => {
     if (!token || !content.trim()) return;
@@ -494,14 +531,64 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
+    const handleTyping = (payload: {
+      conversationId: string;
+      userId: string;
+      displayName: string;
+      isTyping: boolean;
+    }) => {
+      if (payload.conversationId !== activeConvIdRef.current || payload.userId === user?.id) return;
+
+      setTypingUsers((prev) => {
+        if (!payload.isTyping) {
+          const next = { ...prev };
+          delete next[payload.userId];
+          return next;
+        }
+        return { ...prev, [payload.userId]: payload.displayName };
+      });
+
+      if (typingTimersRef.current[payload.userId]) {
+        clearTimeout(typingTimersRef.current[payload.userId]);
+      }
+
+      if (payload.isTyping) {
+        typingTimersRef.current[payload.userId] = setTimeout(() => {
+          setTypingUsers((prev) => {
+            const next = { ...prev };
+            delete next[payload.userId];
+            return next;
+          });
+        }, 3000);
+      }
+    };
+
+    const handleRead = (payload: { conversationId: string; userId: string; lastReadAt: string | Date }) => {
+      setConversations((prev) =>
+        prev.map((c) => {
+          if (c.id !== payload.conversationId) return c;
+          return {
+            ...c,
+            participants: c.participants.map((p) =>
+              p.userId === payload.userId ? { ...p, lastReadAt: payload.lastReadAt } : p
+            ),
+          };
+        })
+      );
+    };
+
     socket.on('chat:message', handleMessage);
     socket.on('chat:conversation_updated', handleConversationUpdated);
     socket.on('chat:participant_removed', handleParticipantRemoved);
+    socket.on('chat:typing', handleTyping);
+    socket.on('chat:read', handleRead);
 
     return () => {
       socket.off('chat:message', handleMessage);
       socket.off('chat:conversation_updated', handleConversationUpdated);
       socket.off('chat:participant_removed', handleParticipantRemoved);
+      socket.off('chat:typing', handleTyping);
+      socket.off('chat:read', handleRead);
     };
   }, [socket, user?.id, loadConversations]);
 
@@ -534,6 +621,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toggleMute,
         hideConversation,
         markAsUnread,
+        markAsRead,
+        typingUsers,
+        sendTyping,
         sendMessage,
         loadConversations,
       }}
@@ -553,6 +643,8 @@ const defaultChatContext: ChatContextType = {
   messages: [],
   isDraft: false,
   isLoading: false,
+  typingUsers: {},
+  sendTyping: () => {},
   setActiveConversationId: () => {},
   startDraftChat: () => {},
   selectRecipient: async () => {},
@@ -567,6 +659,7 @@ const defaultChatContext: ChatContextType = {
   toggleMute: async () => {},
   hideConversation: async () => {},
   markAsUnread: async () => {},
+  markAsRead: async () => {},
   sendMessage: async () => {},
   loadConversations: async () => {},
 };
