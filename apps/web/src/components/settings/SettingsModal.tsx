@@ -12,10 +12,11 @@ import {
   Field,
   TabList,
   Tab,
+  Switch,
+  Select,
   makeStyles,
   tokens,
   shorthands,
-  Body1,
   Caption1,
   SelectTabData,
   SelectTabEvent,
@@ -25,14 +26,17 @@ import {
   WeatherSunnyRegular,
   WeatherMoonRegular,
   DesktopRegular,
+  ColorRegular,
   SettingsRegular,
   AlertRegular,
 } from '@fluentui/react-icons';
 import { useTheme, ThemeMode } from '../../theme/ThemeContext';
+import { useLanguage, SupportedLanguage, supportedLanguages } from '../../i18n/LanguageContext';
+import { useSettings } from '../../settings/SettingsContext';
 
 const useStyles = makeStyles({
   surface: {
-    maxWidth: '620px',
+    maxWidth: '640px',
     width: '90vw',
     ...shorthands.padding(tokens.spacingVerticalL, tokens.spacingHorizontalXL),
     ...shorthands.borderRadius(tokens.borderRadiusLarge),
@@ -47,7 +51,7 @@ const useStyles = makeStyles({
   bodyLayout: {
     display: 'flex',
     ...shorthands.gap(tokens.spacingHorizontalXL),
-    minHeight: '280px',
+    minHeight: '320px',
     marginTop: tokens.spacingVerticalM,
   },
   sideNav: {
@@ -75,8 +79,6 @@ const useStyles = makeStyles({
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
     cursor: 'pointer',
     marginBottom: tokens.spacingVerticalS,
-    transitionProperty: 'background-color, border-color',
-    transitionDuration: tokens.durationFaster,
     '&:hover': {
       backgroundColor: tokens.colorNeutralBackground1Hover,
       ...shorthands.borderColor(tokens.colorBrandStroke1),
@@ -85,6 +87,18 @@ const useStyles = makeStyles({
   radioSelected: {
     ...shorthands.borderColor(tokens.colorBrandStroke1),
     backgroundColor: tokens.colorNeutralBackground1Selected,
+  },
+  toggleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...shorthands.padding(tokens.spacingVerticalS, '0'),
+    ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke3),
+  },
+  toggleText: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap('2px'),
   },
 });
 
@@ -95,7 +109,10 @@ interface SettingsModalProps {
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onOpenChange }) => {
   const styles = useStyles();
-  const { themeMode, setThemeMode } = useTheme();
+  const { themeMode } = useTheme();
+  const { language, t } = useLanguage();
+  const { notifyBanners, notifySounds, notifyEmailDigest, updateSettings } = useSettings();
+
   const [selectedTab, setSelectedTab] = useState<'general' | 'notifications'>('general');
 
   const handleTabSelect = (_: SelectTabEvent, data: SelectTabData) => {
@@ -104,14 +121,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
-      <DialogSurface className={styles.surface} aria-label="Application Settings">
+      <DialogSurface className={styles.surface} aria-label={t('settings', 'Settings')}>
         <DialogBody>
           <div className={styles.headerRow}>
-            <DialogTitle style={{ margin: 0 }}>Settings</DialogTitle>
+            <DialogTitle style={{ margin: 0 }}>{t('settings', 'Settings')}</DialogTitle>
             <Button
               appearance="subtle"
               icon={<DismissRegular />}
-              aria-label="Close settings"
+              aria-label={t('closeSettings', 'Close settings')}
               onClick={() => onOpenChange(false)}
             />
           </div>
@@ -126,57 +143,136 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onOpenChange
                 aria-label="Settings Categories"
               >
                 <Tab value="general" icon={<SettingsRegular />}>
-                  General
+                  {t('general', 'General')}
                 </Tab>
                 <Tab value="notifications" icon={<AlertRegular />}>
-                  Notifications
+                  {t('notifications', 'Notifications')}
                 </Tab>
               </TabList>
             </div>
 
-            {/* Main settings pane */}
+            {/* Main content pane */}
             <DialogContent className={styles.contentArea}>
               {selectedTab === 'general' && (
                 <div>
-                  <div className={styles.sectionTitle}>Theme</div>
+                  {/* Theme Mode */}
+                  <div className={styles.sectionTitle}>{t('theme', 'Theme')}</div>
                   <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalM, color: tokens.colorNeutralForeground2 }}>
-                    Choose how BCC Teams looks on your device.
+                    {t('themeSubtitle', 'Choose how BCC Teams looks on your device.')}
                   </Caption1>
 
-                  <Field label="Display Theme">
+                  <Field label={t('displayTheme', 'Display Theme')}>
                     <RadioGroup
                       value={themeMode}
-                      onChange={(_, data) => setThemeMode(data.value as ThemeMode)}
                       aria-label="Theme Selection"
+                      onChange={(_, data) => void updateSettings({ theme: data.value as ThemeMode })}
                     >
-                      <label className={`${styles.radioOption} ${themeMode === 'light' ? styles.radioSelected : ''}`}>
-                        <Radio value="light" label="Light" />
-                        <WeatherSunnyRegular style={{ marginLeft: 'auto', color: tokens.colorNeutralForeground2 }} />
-                      </label>
-
-                      <label className={`${styles.radioOption} ${themeMode === 'dark' ? styles.radioSelected : ''}`}>
-                        <Radio value="dark" label="Dark" />
-                        <WeatherMoonRegular style={{ marginLeft: 'auto', color: tokens.colorNeutralForeground2 }} />
-                      </label>
-
-                      <label className={`${styles.radioOption} ${themeMode === 'system' ? styles.radioSelected : ''}`}>
-                        <Radio value="system" label="System default" />
-                        <DesktopRegular style={{ marginLeft: 'auto', color: tokens.colorNeutralForeground2 }} />
-                      </label>
+                      <Radio
+                        value="light"
+                        label={t('light', 'Light')}
+                        className={`${styles.radioOption} ${themeMode === 'light' ? styles.radioSelected : ''}`}
+                      />
+                      <Radio
+                        value="dark"
+                        label={t('dark', 'Dark')}
+                        className={`${styles.radioOption} ${themeMode === 'dark' ? styles.radioSelected : ''}`}
+                      />
+                      <Radio
+                        value="high-contrast"
+                        label={t('highContrast', 'High Contrast')}
+                        className={`${styles.radioOption} ${themeMode === 'high-contrast' ? styles.radioSelected : ''}`}
+                      />
+                      <Radio
+                        value="system"
+                        label={t('systemDefault', 'System default')}
+                        className={`${styles.radioOption} ${themeMode === 'system' ? styles.radioSelected : ''}`}
+                      />
                     </RadioGroup>
                   </Field>
+
+                  {/* Language Selection */}
+                  <div style={{ marginTop: tokens.spacingVerticalXL }}>
+                    <div className={styles.sectionTitle}>{t('language', 'Language')}</div>
+                    <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalM, color: tokens.colorNeutralForeground2 }}>
+                      {t('languageSubtitle', 'Select your preferred application display language.')}
+                    </Caption1>
+                    <Field label={t('appLanguage', 'App Language')}>
+                      <Select
+                        value={language}
+                        aria-label="App Language Selection"
+                        onChange={(ev, data) => {
+                          const val = (data?.value || ev.target.value) as SupportedLanguage;
+                          void updateSettings({ language: val });
+                        }}
+                      >
+                        {supportedLanguages.map((lang) => (
+                          <option key={lang.code} value={lang.code}>
+                            {lang.nativeName} ({lang.label})
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
                 </div>
               )}
 
               {selectedTab === 'notifications' && (
                 <div>
-                  <div className={styles.sectionTitle}>Notifications</div>
-                  <Body1 block style={{ color: tokens.colorNeutralForeground2 }}>
-                    Notification banners and sound preferences are managed here.
-                  </Body1>
-                  <Caption1 style={{ display: 'block', marginTop: tokens.spacingVerticalM, color: tokens.colorNeutralForeground3 }}>
-                    Fine-grained notification controls will be configured in F-005.
+                  <div className={styles.sectionTitle}>{t('notificationPreferences', 'Notification Preferences')}</div>
+                  <Caption1 style={{ display: 'block', marginBottom: tokens.spacingVerticalM, color: tokens.colorNeutralForeground2 }}>
+                    {t('notificationSubtitle', 'Configure alert sounds, popups, and email digests.')}
                   </Caption1>
+
+                  {/* Banner toasts */}
+                  <div className={styles.toggleRow}>
+                    <div className={styles.toggleText}>
+                      <span style={{ fontWeight: tokens.fontWeightSemibold }}>
+                        {t('bannerToasts', 'Banner pop-up toasts')}
+                      </span>
+                      <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                        {t('bannerToastsDesc', 'Display desktop notification banners for direct mentions and replies')}
+                      </Caption1>
+                    </div>
+                    <Switch
+                      checked={notifyBanners}
+                      aria-label={t('bannerToasts', 'Banner pop-up toasts')}
+                      onChange={(ev, data) => void updateSettings({ notifyBanners: data.checked ?? ev.currentTarget.checked })}
+                    />
+                  </div>
+
+                  {/* Sound alerts */}
+                  <div className={styles.toggleRow}>
+                    <div className={styles.toggleText}>
+                      <span style={{ fontWeight: tokens.fontWeightSemibold }}>
+                        {t('soundAlerts', 'Sound alerts')}
+                      </span>
+                      <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                        {t('soundAlertsDesc', 'Play audio chimes for incoming messages and call rings')}
+                      </Caption1>
+                    </div>
+                    <Switch
+                      checked={notifySounds}
+                      aria-label={t('soundAlerts', 'Sound alerts')}
+                      onChange={(ev, data) => void updateSettings({ notifySounds: data.checked ?? ev.currentTarget.checked })}
+                    />
+                  </div>
+
+                  {/* Email digest */}
+                  <div className={styles.toggleRow}>
+                    <div className={styles.toggleText}>
+                      <span style={{ fontWeight: tokens.fontWeightSemibold }}>
+                        {t('emailDigest', 'Missed activity email digest')}
+                      </span>
+                      <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
+                        {t('emailDigestDesc', 'Receive periodic email summaries of missed mentions and chats')}
+                      </Caption1>
+                    </div>
+                    <Switch
+                      checked={notifyEmailDigest}
+                      aria-label={t('emailDigest', 'Missed activity email digest')}
+                      onChange={(ev, data) => void updateSettings({ notifyEmailDigest: data.checked ?? ev.currentTarget.checked })}
+                    />
+                  </div>
                 </div>
               )}
             </DialogContent>
@@ -184,7 +280,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ open, onOpenChange
 
           <DialogActions style={{ marginTop: tokens.spacingVerticalL }}>
             <Button appearance="primary" onClick={() => onOpenChange(false)}>
-              Done
+              {t('done', 'Done')}
             </Button>
           </DialogActions>
         </DialogBody>

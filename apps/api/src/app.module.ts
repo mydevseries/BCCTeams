@@ -6,6 +6,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { PresenceModule } from './presence/presence.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { PresenceModule } from './presence/presence.module';
     AuthModule,
     UsersModule,
     PresenceModule,
+    SettingsModule,
   ],
 })
 export class AppModule {}
