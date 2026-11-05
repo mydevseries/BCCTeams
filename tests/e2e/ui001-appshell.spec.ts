@@ -69,7 +69,7 @@ test.describe('UI-001: App Shell Layout, Responsive Grids, and Theming', () => {
         const setTheme = async (mode: 'light' | 'dark') => {
           await page.getByRole('button', { name: 'User Profile' }).click();
           await page.getByRole('menuitem', { name: 'Settings' }).click();
-          const dialog = page.getByRole('dialog', { name: 'Application Settings' });
+          const dialog = page.getByRole('dialog', { name: /Settings/i });
           await expect(dialog).toBeVisible();
           if (mode === 'dark') {
             await dialog.getByRole('radio', { name: 'Dark' }).click();
@@ -156,7 +156,7 @@ test.describe('UI-001: App Shell Layout, Responsive Grids, and Theming', () => {
         });
 
         await page.getByRole('menuitem', { name: 'Settings' }).click();
-        const settingsDialog = page.getByRole('dialog', { name: 'Application Settings' });
+        const settingsDialog = page.getByRole('dialog', { name: /Settings/i });
         await expect(settingsDialog).toBeVisible();
         await page.screenshot({
           path: `assets/screenshots/ui001/settings-modal-dark-${vp.name}.png`,

@@ -2,6 +2,8 @@ import React from 'react';
 import { FluentProvider } from '@fluentui/react-components';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, useTheme } from './theme/ThemeContext';
+import { LanguageProvider } from './i18n/LanguageContext';
+import { SettingsProvider } from './settings/SettingsContext';
 import { AuthProvider } from './auth/AuthContext';
 import { PresenceProvider } from './presence/PresenceContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
@@ -30,6 +32,8 @@ const ThemedApp: React.FC = () => {
       }}
     >
       <AuthProvider>
+        <LanguageProvider>
+          <SettingsProvider>
         <PresenceProvider>
           <BrowserRouter>
             <Routes>
@@ -117,6 +121,8 @@ const ThemedApp: React.FC = () => {
             </Routes>
           </BrowserRouter>
         </PresenceProvider>
+          </SettingsProvider>
+        </LanguageProvider>
       </AuthProvider>
     </FluentProvider>
   );

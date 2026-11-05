@@ -74,6 +74,36 @@ export interface MemberProfile extends UserProfile {
   localTime?: string;
 }
 
+export interface UserSettings {
+  userId: string;
+  theme: string;
+  language: string;
+  notifyBanners: boolean;
+  notifySounds: boolean;
+  notifyEmailDigest: boolean;
+  workingHoursStart?: string;
+  workingHoursEnd?: string;
+  workLocation?: string;
+  readReceipts?: boolean;
+  chatDensity?: string;
+  enterToSend?: boolean;
+  updatedAt?: Date | string;
+}
+
+export interface UpdateSettingsDto {
+  theme?: string;
+  language?: string;
+  notifyBanners?: boolean;
+  notifySounds?: boolean;
+  notifyEmailDigest?: boolean;
+  workingHoursStart?: string;
+  workingHoursEnd?: string;
+  workLocation?: string;
+  readReceipts?: boolean;
+  chatDensity?: string;
+  enterToSend?: boolean;
+}
+
 export interface SocketEvents {
   'presence:changed': PresenceState;
   'presence:update': PresenceState;
