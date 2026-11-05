@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { PresenceModule } from './presence/presence.module';
 import { SettingsModule } from './settings/settings.module';
 import { RolesModule } from './roles/roles.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { RolesModule } from './roles/roles.module';
     PresenceModule,
     SettingsModule,
     RolesModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

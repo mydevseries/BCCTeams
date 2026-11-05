@@ -6,6 +6,7 @@ import { LanguageProvider } from './i18n/LanguageContext';
 import { SettingsProvider } from './settings/SettingsContext';
 import { AuthProvider } from './auth/AuthContext';
 import { PresenceProvider } from './presence/PresenceContext';
+import { ChatProvider } from './chat/ChatContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
 import { ChatView } from './views/ChatView';
@@ -35,94 +36,93 @@ const ThemedApp: React.FC = () => {
       <AuthProvider>
         <LanguageProvider>
           <SettingsProvider>
-        <PresenceProvider>
-          <BrowserRouter>
-            <Routes>
-              {/* Public Authentication Routes */}
-              <Route path="/signin" element={<SignInView />} />
-              <Route path="/signup" element={<SignUpView />} />
-              <Route path="/forgot-password" element={<ForgotPasswordView />} />
-              <Route path="/reset-password" element={<ResetPasswordView />} />
+            <PresenceProvider>
+              <ChatProvider>
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public Authentication Routes */}
+                    <Route path="/signin" element={<SignInView />} />
+                    <Route path="/signup" element={<SignUpView />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordView />} />
+                    <Route path="/reset-password" element={<ResetPasswordView />} />
 
-              {/* Protected Application Routes */}
-              <Route
-                path="/"
-                element={
-                  <ProtectedRoute>
-                    <AppShell />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/chat" replace />} />
-                <Route path="chat" element={<ChatView />} />
-                <Route path="directory" element={<DirectoryView />} />
-                <Route path="admin/roles" element={<AdminRolesView />} />
-                <Route path="activity" element={<ActivityView />} />
-                <Route
-                  path="teams"
-                  element={
-                    <GenericSectionView
-                      title="Teams & Channels"
-                      description="Collaborate in dedicated spaces with standard, private, and shared channels."
-                      illustration="/illustrations/empty-teams.svg"
-                      featureId="T-001"
-                      actionText="Create or Join Team"
-                    />
-                  }
-                />
-                <Route
-                  path="calendar"
-                  element={
-                    <GenericSectionView
-                      title="Calendar"
-                      description="Schedule, manage, and join video meetings and appointments."
-                      illustration="/illustrations/empty-calendar.svg"
-                      featureId="W-001"
-                      actionText="New Meeting"
-                    />
-                  }
-                />
-                <Route
-                  path="calls"
-                  element={
-                    <GenericSectionView
-                      title="Calls"
-                      description="High-definition 1:1 and group audio/video calls with screen sharing."
-                      illustration="/illustrations/empty-chat.svg"
-                      featureId="K-001"
-                      actionText="Make a Call"
-                    />
-                  }
-                />
-                <Route
-                  path="files"
-                  element={
-                    <GenericSectionView
-                      title="Files"
-                      description="Access your recent files, team libraries, and shared documents securely."
-                      illustration="/illustrations/empty-files.svg"
-                      featureId="D-001"
-                    />
-                  }
-                />
-                <Route
-                  path="apps"
-                  element={
-                    <GenericSectionView
-                      title="Apps"
-                      description="Extend BCC Teams with internal integrations and productivity workflows."
-                      illustration="/illustrations/empty-search.svg"
-                      featureId="P-001"
-                    />
-                  }
-                />
-              </Route>
+                    {/* Protected Application Routes */}
+                    <Route
+                      path="/"
+                      element={
+                        <ProtectedRoute>
+                          <AppShell />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route index element={<Navigate to="/chat" replace />} />
+                      <Route path="chat" element={<ChatView />} />
+                      <Route path="directory" element={<DirectoryView />} />
+                      <Route path="admin/roles" element={<AdminRolesView />} />
+                      <Route path="activity" element={<ActivityView />} />
+                      <Route
+                        path="teams"
+                        element={
+                          <GenericSectionView
+                            title="Teams and Channels"
+                            description="Collaborate with your project groups, departments, and cross-functional teams."
+                            featureId="T-001"
+                            illustration="/illustrations/teams-empty.svg"
+                          />
+                        }
+                      />
+                      <Route
+                        path="calendar"
+                        element={
+                          <GenericSectionView
+                            title="Calendar"
+                            description="Schedule meetings, view upcoming events, and coordinate with colleagues."
+                            featureId="W-001"
+                            illustration="/illustrations/calendar-empty.svg"
+                          />
+                        }
+                      />
+                      <Route
+                        path="calls"
+                        element={
+                          <GenericSectionView
+                            title="Calls"
+                            description="Make direct voice and video calls, check call history, and access voicemails."
+                            featureId="K-001"
+                            illustration="/illustrations/calls-empty.svg"
+                          />
+                        }
+                      />
+                      <Route
+                        path="files"
+                        element={
+                          <GenericSectionView
+                            title="Files"
+                            description="Access all your documents, shared attachments, and team files in one place."
+                            featureId="D-001"
+                            illustration="/illustrations/files-empty.svg"
+                          />
+                        }
+                      />
+                      <Route
+                        path="apps"
+                        element={
+                          <GenericSectionView
+                            title="Apps & Integrations"
+                            description="Extend your workspace with productivity tools, bots, and enterprise connectors."
+                            featureId="P-001"
+                            illustration="/illustrations/apps-empty.svg"
+                          />
+                        }
+                      />
+                    </Route>
 
-              {/* Fallback */}
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </BrowserRouter>
-        </PresenceProvider>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </BrowserRouter>
+              </ChatProvider>
+            </PresenceProvider>
           </SettingsProvider>
         </LanguageProvider>
       </AuthProvider>

@@ -1,12 +1,13 @@
 import React from 'react';
 import { makeStyles, tokens } from '@fluentui/react-components';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { ProfileModal } from '../profile/ProfileModal';
 import { SettingsModal } from '../settings/SettingsModal';
 import { AdminRolesModal } from '../../roles';
 import { StatusMessageModal } from '../presence/StatusMessageModal';
 import { MemberProfileCard } from '../profile/MemberProfileCard';
 import { MemberProfile } from '@bcc/shared';
+import { useChat } from '../../chat/ChatContext';
 
 const useStyles = makeStyles({
   mainPane: {
@@ -46,6 +47,8 @@ export const MainPane: React.FC<MainPaneProps> = ({
   setSelectedMember,
 }) => {
   const styles = useStyles();
+  const navigate = useNavigate();
+  const { selectRecipient } = useChat();
 
   return (
     <main className={styles.mainPane} role="main">
@@ -77,8 +80,14 @@ export const MainPane: React.FC<MainPaneProps> = ({
         onOpenChange={(open) => {
           if (!open) setSelectedMember(null);
         }}
+        onStartChat={() => {
+          if (selectedMember) {
+            selectRecipient(selectedMember);
+            navigate('/chat');
+            setSelectedMember(null);
+          }
+        }}
       />
     </main>
   );
 };
-

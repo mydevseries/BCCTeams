@@ -89,7 +89,7 @@ Feature IDs are used with /build-feature <id>.
 ## Phase 2 — Chat
 | ID | Feature | Status |
 |---|---|---|
-| C-001 | 1:1 chat: start a new chat with any user | Todo |
+| C-001 | 1:1 chat: start a new chat with any user | Built |
 | C-002 | Group chat: up to 250 people, optional group name, add/remove people | Todo |
 | C-003 | Chat list: recent chats, unread bold + count, pin, mute, hide, mark unread | Todo |
 | C-004 | Send messages in real time; typing indicator; sent/read receipts | Todo |
@@ -105,23 +105,23 @@ Feature IDs are used with /build-feature <id>.
 | C-014 | Forward and share a message to another chat | Todo |
 | C-015 | Pin messages in a chat | Todo |
 | C-016 | Link previews | Todo |
-| C-017 | Voice messages (mobile later) | Todo |
+| C-017 | Voice messages (mobile later) | Deferred | Mobile/audio pipeline — do in Phase 10 |
 | C-018 | Chat tabs: Chat, Files, and custom tabs | Todo |
-| C-019 | Pop out a chat into its own window | Todo |
+| C-019 | Pop out a chat into its own window | Deferred | Needs multi-window — later |
 | C-020 | Translate a message inline | Todo |
 | C-021 | Scheduled send: schedule messages to be dispatched at a future date and time | Todo |
 | C-022 | Custom chat sections and folders: organize conversations into custom collapsible groups | Todo |
 | C-023 | Automatic chat sections: dedicated auto-updating sections for "Muted" chats and "Meeting" chats | Todo |
-| C-024 | Live collaborative components: embed editable real-time checklists, tables, and task trackers inside messages | Todo |
+| C-024 | Live collaborative components: embed editable real-time checklists, tables, and task trackers inside messages | Deferred | Needs Yjs infra — after core chat |
 | C-025 | In-chat polls and surveys: create instant interactive polls with real-time result tallies | Todo |
 | C-026 | Chat with yourself: personal notes, drafts, and file scratchpad conversation | Todo |
 | C-027 | Configurable chat history sharing: choose whether to share none, previous X days, or full history when adding a member to group chat | Todo |
-| C-028 | Video clip messages: record and send quick camera video notes directly in chat | Todo |
+| C-028 | Video clip messages: record and send quick camera video notes directly in chat | Deferred | Video pipeline — Phase 6/10 |
 | C-029 | Autocorrect and Enter-to-send toggle: client-side spelling assistance and option to configure Enter as newline vs. send | Todo |
 | C-030 | Read receipts privacy toggle: enable or disable sending and receiving read receipt acknowledgments per user | Todo |
 | C-031 | Chat display density: toggle between compact high-density view and comfortable spacious view | Todo |
 | C-032 | Praise and kudos cards: send personalized employee appreciation and recognition badges | Todo |
-| C-033 | External federation: secure cross-organization direct chat with approved external partner domains | Todo |
+| C-033 | External federation: secure cross-organization direct chat with approved external partner domains | Deferred | Admin + external auth — Phase 9 |
 
 ### Acceptance criteria — Phase 2
 

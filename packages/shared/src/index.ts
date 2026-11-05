@@ -114,3 +114,56 @@ export interface SocketEvents {
     isTyping: boolean;
   };
 }
+
+export type ConversationType = 'DIRECT' | 'GROUP';
+export type ParticipantRole = 'ADMIN' | 'MEMBER';
+
+export interface ChatParticipant {
+  id: string;
+  conversationId: string;
+  userId: string;
+  role: ParticipantRole;
+  joinedAt: Date | string;
+  lastReadAt: Date | string;
+  isPinned: boolean;
+  isMuted: boolean;
+  user: UserProfile & {
+    presence?: {
+      status: PresenceStatus;
+      statusMessage?: string | null;
+      statusExpiresAt?: string | Date | null;
+    } | null;
+  };
+}
+
+export interface ChatMessage {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  isEdited: boolean;
+  isDeleted: boolean;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  sender?: UserProfile;
+}
+
+export interface ConversationSummary {
+  id: string;
+  type: ConversationType;
+  title?: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+  participants: ChatParticipant[];
+  lastMessage?: ChatMessage | null;
+  unreadCount?: number;
+  otherParticipant?: ChatParticipant['user'];
+}
+
+export interface CreateDirectChatDto {
+  recipientId: string;
+}
+
+export interface SendMessageDto {
+  content: string;
+}

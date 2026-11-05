@@ -30,6 +30,7 @@ import { usePresence } from '../presence/PresenceContext';
 import { MemberProfileCard } from '../components/profile/MemberProfileCard';
 import { useNavigate } from 'react-router-dom';
 import { useUserRole, GuestRestrictedBanner } from '../roles';
+import { useChat } from '../chat/ChatContext';
 
 const useStyles = makeStyles({
   container: {
@@ -119,6 +120,7 @@ export const DirectoryView: React.FC = () => {
   const navigate = useNavigate();
   const { getUserPresence, subscribeUsers, unsubscribeUsers } = usePresence();
   const { canBrowseDirectory, isGuest } = useUserRole();
+  const { selectRecipient } = useChat();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -407,7 +409,7 @@ export const DirectoryView: React.FC = () => {
         member={selectedMember}
         open={isMemberCardOpen}
         onOpenChange={setIsMemberCardOpen}
-        onStartChat={() => navigate('/chat')}
+        onStartChat={() => { if (selectedMember) selectRecipient(selectedMember); navigate('/chat'); }}
       />
     </div>
   );
