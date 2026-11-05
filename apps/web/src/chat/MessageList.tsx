@@ -4,7 +4,9 @@ import {
   tokens,
   shorthands,
   Avatar,
+  AvatarGroup,
 } from '@fluentui/react-components';
+import { PeopleRegular } from '@fluentui/react-icons';
 import { ChatMessage, MemberProfile } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
@@ -42,7 +44,7 @@ const useStyles = makeStyles({
   introNotice: {
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground3,
-    maxWidth: '400px',
+    maxWidth: '440px',
     marginTop: tokens.spacingVerticalS,
   },
   messageRow: {
@@ -97,15 +99,43 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground1,
     borderTopLeftRadius: '2px',
   },
+  systemMessageRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shorthands.padding(tokens.spacingVerticalXS, tokens.spacingHorizontalM),
+    ...shorthands.gap(tokens.spacingHorizontalS),
+    alignSelf: 'center',
+    backgroundColor: tokens.colorNeutralBackground3,
+    ...shorthands.borderRadius(tokens.borderRadiusCircular),
+    maxWidth: '80%',
+    marginTop: tokens.spacingVerticalXS,
+    marginBottom: tokens.spacingVerticalXS,
+  },
+  systemMessageText: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground2,
+    textAlign: 'center',
+  },
+  systemMessageTime: {
+    fontSize: tokens.fontSizeBase100,
+    color: tokens.colorNeutralForeground4,
+  },
 });
 
 interface MessageListProps {
   messages: ChatMessage[];
-  recipient: MemberProfile | null;
+  recipient?: MemberProfile | null;
+  recipients?: MemberProfile[];
   isDraft: boolean;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, recipient, isDraft }) => {
+export const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  recipient,
+  recipients = [],
+  isDraft,
+}) => {
   const styles = useStyles();
   const { user } = useAuth();
   const { getUserPresence } = usePresence();
@@ -131,35 +161,77 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, recipient, i
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (isDraft && recipient && messages.length === 0) {
-    const livePresence = getUserPresence(recipient.id);
-    return (
-      <div className={styles.container}>
-        <div className={styles.draftIntro}>
-          <Avatar
-            name={recipient.displayName}
-            image={recipient.avatarUrl ? { src: recipient.avatarUrl } : undefined}
-            badge={{ status: getFluentBadgeStatus(livePresence?.status) }}
-            size={64}
-          />
-          <span className={styles.introName}>{recipient.displayName}</span>
-          <span className={styles.introSubtitle}>
-            {recipient.jobTitle || recipient.department || recipient.email}
-          </span>
-          <span className={styles.introNotice}>
-            This is the start of your 1:1 conversation history with {recipient.displayName}. Send a message below to connect.
-          </span>
+  // Draft intro
+  if (isDraft && messages.length === 0) {
+    if (recipient) {
+      const livePresence = getUserPresence(recipient.id);
+      return (
+        <div className={styles.container}>
+          <div className={styles.draftIntro}>
+            <Avatar
+              name={recipient.displayName}
+              image={recipient.avatarUrl ? { src: recipient.avatarUrl } : undefined}
+              badge={{ status: getFluentBadgeStatus(livePresence?.status) }}
+              size={64}
+            />
+            <span className={styles.introName}>{recipient.displayName}</span>
+            <span className={styles.introSubtitle}>
+              {recipient.jobTitle || recipient.department || recipient.email}
+            </span>
+            <span className={styles.introNotice}>
+              This is the start of your 1:1 conversation history with {recipient.displayName}. Send a message below to connect.
+            </span>
+          </div>
+          <div ref={bottomRef} />
         </div>
-        <div ref={bottomRef} />
-      </div>
-    );
+      );
+    }
+
+    if (recipients.length > 1) {
+      return (
+        <div className={styles.container}>
+          <div className={styles.draftIntro}>
+            <AvatarGroup layout="stack" size={48}>
+              {recipients.map((r) => (
+                <Avatar
+                  key={r.id}
+                  name={r.displayName}
+                  image={r.avatarUrl ? { src: r.avatarUrl } : undefined}
+                />
+              ))}
+            </AvatarGroup>
+            <span className={styles.introName}>New Group Conversation</span>
+            <span className={styles.introSubtitle}>
+              {recipients.map((r) => r.displayName).join(', ')}
+            </span>
+            <span className={styles.introNotice}>
+              Start a new group chat with {recipients.length} colleagues. Send a message below to get started.
+            </span>
+          </div>
+          <div ref={bottomRef} />
+        </div>
+      );
+    }
   }
 
   return (
     <div className={styles.container} role="log" aria-label="Chat messages" aria-live="polite">
       {messages.map((msg) => {
+        // System message rendering
+        if (msg.isSystem) {
+          return (
+            <div key={msg.id} className={styles.systemMessageRow} role="status">
+              <span className={styles.systemMessageText}>{msg.content}</span>
+              <span className={styles.systemMessageTime}>{formatMessageTime(msg.createdAt)}</span>
+            </div>
+          );
+        }
+
         const isOutgoing = msg.senderId === user?.id;
-        const senderDisplayName = msg.sender?.displayName || (isOutgoing ? user?.displayName : recipient?.displayName) || 'Colleague';
+        const senderDisplayName =
+          msg.sender?.displayName ||
+          (isOutgoing ? user?.displayName : recipient?.displayName) ||
+          'Colleague';
 
         return (
           <div

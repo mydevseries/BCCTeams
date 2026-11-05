@@ -30,7 +30,7 @@ const renderWithProviders = (component: React.ReactElement) => {
   );
 };
 
-describe('ChatHeader (C-001)', () => {
+describe('ChatHeader (C-001 & C-002)', () => {
   it('renders participant full name, job title, and quick action buttons', () => {
     renderWithProviders(<ChatHeader participant={mockMember} />);
 
@@ -38,6 +38,26 @@ describe('ChatHeader (C-001)', () => {
     expect(screen.getByText('Security Lead')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /audio call/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /video call/i })).toBeInTheDocument();
+  });
+
+  it('renders group title, participants count, and edit action for group chat', () => {
+    const mockGroupConv: any = {
+      id: 'grp-1',
+      type: 'GROUP',
+      title: 'Project Phoenix',
+      participants: [
+        { id: 'p1', userId: 'm1', role: 'ADMIN', user: mockMember },
+        { id: 'p2', userId: 'm2', role: 'MEMBER', user: { ...mockMember, id: 'm2', displayName: 'John Doe' } },
+      ],
+      messages: [],
+    };
+
+    renderWithProviders(<ChatHeader conversation={mockGroupConv} />);
+
+    expect(screen.getByText('Project Phoenix')).toBeInTheDocument();
+    expect(screen.getByText('2 participants')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit group name/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view group members/i })).toBeInTheDocument();
   });
 });
 

@@ -2,6 +2,8 @@ import {
   Controller,
   Get,
   Post,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
@@ -11,6 +13,9 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateDirectChatDto } from './dto/create-direct-chat.dto';
+import { CreateGroupChatDto } from './dto/create-group-chat.dto';
+import { UpdateConversationDto } from './dto/update-conversation.dto';
+import { AddParticipantDto } from './dto/add-participant.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { Request } from 'express';
 
@@ -47,6 +52,54 @@ export class ChatController {
     );
   }
 
+  @Post('conversations/group')
+  async createGroupConversation(
+    @Req() req: Request,
+    @Body() dto: CreateGroupChatDto,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.createGroupConversation(user.id, dto);
+  }
+
+  @Patch('conversations/:id')
+  async updateConversationTitle(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Body() dto: UpdateConversationDto,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.updateConversationTitle(conversationId, user.id, dto.title);
+  }
+
+  @Post('conversations/:id/participants')
+  async addParticipant(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Body() dto: AddParticipantDto,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.addParticipant(conversationId, user.id, dto);
+  }
+
+  @Delete('conversations/:id/participants/:targetUserId')
+  async removeParticipant(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+    @Param('targetUserId') targetUserId: string,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.removeParticipant(conversationId, user.id, targetUserId);
+  }
+
+  @Post('conversations/:id/leave')
+  async leaveConversation(
+    @Req() req: Request,
+    @Param('id') conversationId: string,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.removeParticipant(conversationId, user.id, user.id);
+  }
+
   @Get('conversations/:id/messages')
   async getMessages(
     @Req() req: Request,
@@ -80,4 +133,3 @@ export class ChatController {
     return this.chatService.markAsRead(conversationId, user.id);
   }
 }
-

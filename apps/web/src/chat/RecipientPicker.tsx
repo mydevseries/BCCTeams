@@ -17,14 +17,21 @@ import { useChat } from './ChatContext';
 const useStyles = makeStyles({
   container: {
     display: 'flex',
-    alignItems: 'center',
+    flexDirection: 'column',
     ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalL),
     ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
     backgroundColor: tokens.colorNeutralBackground1,
     position: 'relative',
     minHeight: '48px',
-    ...shorthands.gap(tokens.spacingHorizontalM),
+    ...shorthands.gap(tokens.spacingVerticalXS),
     flexShrink: 0,
+  },
+  pickerRow: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalM),
+    flexWrap: 'wrap',
+    minHeight: '32px',
   },
   toLabel: {
     fontSize: tokens.fontSizeBase300,
@@ -32,12 +39,25 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground2,
     flexShrink: 0,
   },
-  inputWrapper: {
-    flexGrow: 1,
-    position: 'relative',
+  chipsContainer: {
     display: 'flex',
     alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalS),
+    flexWrap: 'wrap',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+  },
+  chip: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalXS),
+    backgroundColor: tokens.colorNeutralBackground3,
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    ...shorthands.padding('2px', tokens.spacingHorizontalS),
+    fontSize: tokens.fontSizeBase200,
+  },
+  inputWrapper: {
+    flexGrow: 1,
+    minWidth: '200px',
+    position: 'relative',
   },
   input: {
     width: '100%',
@@ -45,12 +65,23 @@ const useStyles = makeStyles({
       fontSize: tokens.fontSizeBase300,
     },
   },
+  groupTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    ...shorthands.gap(tokens.spacingHorizontalM),
+    marginTop: tokens.spacingVerticalXS,
+  },
+  groupTitleLabel: {
+    fontSize: tokens.fontSizeBase200,
+    color: tokens.colorNeutralForeground3,
+    flexShrink: 0,
+  },
   dropdown: {
     position: 'absolute',
     top: '100%',
     left: 0,
     width: '360px',
-    maxHeight: '280px',
+    maxHeight: '260px',
     overflowY: 'auto',
     backgroundColor: tokens.colorNeutralBackground1,
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke1),
@@ -96,18 +127,19 @@ const useStyles = makeStyles({
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
-  selectedTag: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalXS),
-  },
 });
 
 export const RecipientPicker: React.FC = () => {
   const styles = useStyles();
   const { token, user: currentUser } = useAuth();
   const { getUserPresence } = usePresence();
-  const { activeRecipient, selectRecipient, startDraftChat } = useChat();
+  const {
+    selectedRecipients,
+    addDraftRecipient,
+    removeDraftRecipient,
+    draftTitle,
+    setDraftTitle,
+  } = useChat();
 
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<MemberProfile[]>([]);
@@ -118,7 +150,7 @@ export const RecipientPicker: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Debounced search for colleagues
+  // Search colleagues
   useEffect(() => {
     if (!token || !query.trim()) {
       setResults([]);
@@ -134,8 +166,8 @@ export const RecipientPicker: React.FC = () => {
         });
         if (res.ok) {
           const data: MemberProfile[] = await res.json();
-          // Filter out current user from 1:1 recipient choices
-          const filtered = data.filter((m) => m.id !== currentUser?.id);
+          const selectedIds = new Set(selectedRecipients.map((r) => r.id));
+          const filtered = data.filter((m) => m.id !== currentUser?.id && !selectedIds.has(m.id));
           setResults(filtered);
           setIsOpen(filtered.length > 0);
           setSelectedIndex(0);
@@ -148,7 +180,7 @@ export const RecipientPicker: React.FC = () => {
     }, 150);
 
     return () => clearTimeout(timer);
-  }, [query, token, currentUser?.id]);
+  }, [query, token, currentUser?.id, selectedRecipients]);
 
   // Click outside listener
   useEffect(() => {
@@ -164,10 +196,16 @@ export const RecipientPicker: React.FC = () => {
   const handleSelect = (member: MemberProfile) => {
     setQuery('');
     setIsOpen(false);
-    selectRecipient(member);
+    addDraftRecipient(member);
+    inputRef.current?.focus();
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && query === '' && selectedRecipients.length > 0) {
+      removeDraftRecipient(selectedRecipients[selectedRecipients.length - 1].id);
+      return;
+    }
+
     if (!isOpen || results.length === 0) return;
 
     if (e.key === 'ArrowDown') {
@@ -199,30 +237,39 @@ export const RecipientPicker: React.FC = () => {
 
   return (
     <div className={styles.container} ref={containerRef}>
-      <span className={styles.toLabel}>To:</span>
+      <div className={styles.pickerRow}>
+        <span className={styles.toLabel}>To:</span>
 
-      <div className={styles.inputWrapper}>
-        {activeRecipient ? (
-          <div className={styles.selectedTag}>
-            <Avatar
-              name={activeRecipient.displayName}
-              image={activeRecipient.avatarUrl ? { src: activeRecipient.avatarUrl } : undefined}
-              size={24}
-            />
-            <span className={styles.name}>{activeRecipient.displayName}</span>
-            <Button
-              appearance="subtle"
-              size="small"
-              icon={<DismissRegular />}
-              onClick={() => startDraftChat(null)}
-              aria-label="Remove recipient"
-            />
-          </div>
-        ) : (
+        {/* Selected recipients chips */}
+        <div className={styles.chipsContainer}>
+          {selectedRecipients.map((recipient) => (
+            <div key={recipient.id} className={styles.chip}>
+              <Avatar
+                name={recipient.displayName}
+                image={recipient.avatarUrl ? { src: recipient.avatarUrl } : undefined}
+                size={20}
+              />
+              <span>{recipient.displayName}</span>
+              <Button
+                appearance="subtle"
+                size="small"
+                icon={<DismissRegular />}
+                onClick={() => removeDraftRecipient(recipient.id)}
+                aria-label={`Remove ${recipient.displayName}`}
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.inputWrapper}>
           <Input
             ref={inputRef}
             className={styles.input}
-            placeholder="Type the name or email of a colleague"
+            placeholder={
+              selectedRecipients.length === 0
+                ? 'Type the name or email of a colleague'
+                : 'Add more people...'
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -230,39 +277,54 @@ export const RecipientPicker: React.FC = () => {
             aria-label="New chat recipient"
             contentAfter={loading ? <Spinner size="extra-tiny" /> : undefined}
           />
-        )}
 
-        {isOpen && results.length > 0 && !activeRecipient && (
-          <div className={styles.dropdown} role="listbox" aria-label="Colleague suggestions">
-            {results.map((member, idx) => {
-              const livePresence = getUserPresence(member.id);
-              return (
-                <div
-                  key={member.id}
-                  role="option"
-                  aria-selected={idx === selectedIndex}
-                  className={`${styles.resultItem} ${idx === selectedIndex ? styles.resultItemSelected : ''}`}
-                  onClick={() => handleSelect(member)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                >
-                  <Avatar
-                    name={member.displayName}
-                    image={member.avatarUrl ? { src: member.avatarUrl } : undefined}
-                    badge={{ status: getFluentBadgeStatus(livePresence?.status) }}
-                    size={32}
-                  />
-                  <div className={styles.itemDetails}>
-                    <span className={styles.name}>{member.displayName}</span>
-                    <span className={styles.subtitle}>
-                      {member.jobTitle || member.department || member.email}
-                    </span>
+          {isOpen && results.length > 0 && (
+            <div className={styles.dropdown} role="listbox" aria-label="Colleague suggestions">
+              {results.map((member, idx) => {
+                const livePresence = getUserPresence(member.id);
+                return (
+                  <div
+                    key={member.id}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
+                    className={`${styles.resultItem} ${idx === selectedIndex ? styles.resultItemSelected : ''}`}
+                    onClick={() => handleSelect(member)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                  >
+                    <Avatar
+                      name={member.displayName}
+                      image={member.avatarUrl ? { src: member.avatarUrl } : undefined}
+                      badge={{ status: getFluentBadgeStatus(livePresence?.status) }}
+                      size={32}
+                    />
+                    <div className={styles.itemDetails}>
+                      <span className={styles.name}>{member.displayName}</span>
+                      <span className={styles.subtitle}>
+                        {member.jobTitle || member.department || member.email}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Optional group name input if multiple recipients selected */}
+      {selectedRecipients.length > 1 && (
+        <div className={styles.groupTitleRow}>
+          <span className={styles.groupTitleLabel}>Group name:</span>
+          <Input
+            size="small"
+            placeholder="Name this group (optional)"
+            value={draftTitle}
+            onChange={(e) => setDraftTitle(e.target.value)}
+            aria-label="Group chat name"
+            style={{ maxWidth: '300px' }}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -38,8 +38,8 @@ describe('ChatView (C-001)', () => {
       </FluentProvider>
     );
 
-    expect(screen.getByText(/select a chat to start messaging/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /new chat/i })).toBeInTheDocument();
+    expect(screen.getByText(/welcome to chat/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /start a new chat/i })).toBeInTheDocument();
   });
 
   it('transitions to draft mode and opens recipient picker upon clicking New Chat', () => {
@@ -55,7 +55,7 @@ describe('ChatView (C-001)', () => {
       </FluentProvider>
     );
 
-    const newChatBtn = screen.getByRole('button', { name: /new chat/i });
+    const newChatBtn = screen.getByRole('button', { name: /start a new chat/i });
     fireEvent.click(newChatBtn);
 
     expect(screen.getByText('To:')).toBeInTheDocument();

@@ -143,6 +143,9 @@ export interface ChatMessage {
   content: string;
   isEdited: boolean;
   isDeleted: boolean;
+  isSystem?: boolean;
+  systemAction?: string | null;
+  metadata?: any;
   createdAt: Date | string;
   updatedAt: Date | string;
   sender?: UserProfile;
@@ -162,6 +165,23 @@ export interface ConversationSummary {
 
 export interface CreateDirectChatDto {
   recipientId: string;
+}
+
+export interface CreateGroupChatDto {
+  recipientIds: string[];
+  title?: string;
+}
+
+export interface UpdateConversationDto {
+  title?: string;
+}
+
+export type HistoryShareOption = 'none' | 'all' | 'days';
+
+export interface AddParticipantDto {
+  userId: string;
+  historyOption?: HistoryShareOption;
+  historyDays?: number;
 }
 
 export interface SendMessageDto {

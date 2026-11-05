@@ -7,6 +7,7 @@ import {
   Caption1,
   Body1,
 } from '@fluentui/react-components';
+import { PeopleRegular } from '@fluentui/react-icons';
 import { useChat } from './ChatContext';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
@@ -143,7 +144,7 @@ export const ChatList: React.FC<ChatListProps> = ({ filter }) => {
           {filter === 'unread' ? 'No unread chats' : 'No conversations yet'}
         </Body1>
         <Caption1 style={{ color: tokens.colorNeutralForeground3 }}>
-          Click the compose button above to start a 1:1 chat
+          Click the compose button above to start a chat
         </Caption1>
       </div>
     );
@@ -152,14 +153,28 @@ export const ChatList: React.FC<ChatListProps> = ({ filter }) => {
   return (
     <div className={styles.container} role="list" aria-label="Conversations list">
       {filteredConversations.map((conv) => {
-        const otherParticipant =
-          conv.type === 'DIRECT'
-            ? conv.participants.find((p) => p.userId !== user?.id)?.user
-            : undefined;
+        const isGroup = conv.type === 'GROUP';
+        const otherParticipant = !isGroup
+          ? conv.participants.find((p) => p.userId !== user?.id)?.user
+          : undefined;
 
         const livePresence = otherParticipant ? getUserPresence(otherParticipant.id) : null;
-        const displayName = otherParticipant?.displayName || conv.title || 'Conversation';
+        const displayName = isGroup
+          ? conv.title ||
+            conv.participants
+              .filter((p) => p.userId !== user?.id)
+              .map((p) => p.user.displayName.split(' ')[0])
+              .join(', ') ||
+            'Group Chat'
+          : otherParticipant?.displayName || 'Direct Chat';
+
         const isActive = activeConversationId === conv.id;
+
+        const previewText = conv.lastMessage
+          ? conv.lastMessage.isSystem
+            ? conv.lastMessage.content
+            : `${conv.lastMessage.senderId === user?.id ? 'You: ' : isGroup && conv.lastMessage.sender ? `${conv.lastMessage.sender.displayName.split(' ')[0]}: ` : ''}${conv.lastMessage.content}`
+          : 'New conversation';
 
         return (
           <div
@@ -177,8 +192,9 @@ export const ChatList: React.FC<ChatListProps> = ({ filter }) => {
           >
             <Avatar
               name={displayName}
-              image={otherParticipant?.avatarUrl ? { src: otherParticipant.avatarUrl } : undefined}
-              badge={{ status: getFluentBadgeStatus(livePresence?.status) }}
+              image={!isGroup && otherParticipant?.avatarUrl ? { src: otherParticipant.avatarUrl } : undefined}
+              badge={!isGroup ? { status: getFluentBadgeStatus(livePresence?.status) } : undefined}
+              icon={isGroup ? <PeopleRegular /> : undefined}
               size={32}
             />
 
@@ -193,9 +209,7 @@ export const ChatList: React.FC<ChatListProps> = ({ filter }) => {
               </div>
 
               <div className={styles.rowBottom}>
-                <span className={styles.preview}>
-                  {conv.lastMessage?.content || 'Draft conversation'}
-                </span>
+                <span className={styles.preview}>{previewText}</span>
               </div>
             </div>
           </div>

@@ -91,4 +91,32 @@ describe('RecipientPicker (C-001)', () => {
       expect(screen.getByText('Frontend Architect')).toBeInTheDocument();
     });
   });
+
+  it('selects recipient and allows adding more colleagues for group chat', async () => {
+    render(
+      <FluentProvider theme={webLightTheme}>
+        <AuthProvider>
+          <PresenceProvider>
+            <ChatProvider>
+              <RecipientPicker />
+            </ChatProvider>
+          </PresenceProvider>
+        </AuthProvider>
+      </FluentProvider>
+    );
+
+    const input = screen.getByPlaceholderText(/type the name or email/i);
+    fireEvent.change(input, { target: { value: 'David' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('David Miller')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText('David Miller'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /remove david miller/i })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/add more people/i)).toBeInTheDocument();
+    });
+  });
 });
