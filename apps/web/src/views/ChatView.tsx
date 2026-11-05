@@ -3,9 +3,14 @@ import {
   makeStyles,
   tokens,
   shorthands,
-  Badge,
-  Caption1,
+  Button,
 } from '@fluentui/react-components';
+import { ComposeRegular } from '@fluentui/react-icons';
+import { useChat } from '../chat/ChatContext';
+import { ChatHeader } from '../chat/ChatHeader';
+import { RecipientPicker } from '../chat/RecipientPicker';
+import { MessageList } from '../chat/MessageList';
+import { MessageComposer } from '../chat/MessageComposer';
 
 const useStyles = makeStyles({
   root: {
@@ -16,108 +21,101 @@ const useStyles = makeStyles({
     overflow: 'hidden',
     backgroundColor: tokens.colorNeutralBackground1,
   },
-  header: {
-    height: '48px',
-    minHeight: '48px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    ...shorthands.padding('0', tokens.spacingHorizontalL),
-    ...shorthands.borderBottom('1px', 'solid', tokens.colorNeutralStroke2),
-    backgroundColor: tokens.colorNeutralBackground1,
-    flexShrink: 0,
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalM),
-  },
-  chatTitle: {
-    fontSize: tokens.fontSizeBase400,
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-  },
-  contentScroll: {
+  emptyCenter: {
     flexGrow: 1,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    overflowY: 'auto',
-    overflowX: 'hidden',
     ...shorthands.padding(tokens.spacingVerticalXXL, tokens.spacingHorizontalL),
-  },
-  innerContainer: {
-    maxWidth: '560px',
-    width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
     textAlign: 'center',
     ...shorthands.gap(tokens.spacingVerticalM),
   },
   emptyImg: {
-    width: '220px',
-    height: '150px',
+    width: '200px',
+    height: '140px',
     marginBottom: tokens.spacingVerticalM,
   },
-  title: {
-    fontSize: tokens.fontSizeBase600,
+  emptyTitle: {
+    fontSize: tokens.fontSizeBase500,
     fontWeight: tokens.fontWeightSemibold,
     color: tokens.colorNeutralForeground1,
   },
-  description: {
+  emptySubtitle: {
     fontSize: tokens.fontSizeBase300,
     color: tokens.colorNeutralForeground2,
+    maxWidth: '440px',
     lineHeight: '22px',
-  },
-  badgeCard: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalS),
-    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
-    backgroundColor: tokens.colorNeutralBackground2,
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    marginTop: tokens.spacingVerticalS,
-    ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
   },
 });
 
 export const ChatView: React.FC = () => {
   const styles = useStyles();
+  const {
+    activeConversation,
+    activeRecipient,
+    messages,
+    isDraft,
+    startDraftChat,
+  } = useChat();
 
   return (
     <div className={styles.root}>
-      {/* Main pane header */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span className={styles.chatTitle}>Chat</span>
-          <Badge appearance="tint" color="brand">Coming soon (C-001)</Badge>
-        </div>
-      </header>
-
-      {/* Main pane content - clean empty state without fake composer */}
-      <div className={styles.contentScroll}>
-        <div className={styles.innerContainer}>
+      {isDraft ? (
+        <>
+          <RecipientPicker />
+          {activeRecipient ? (
+            <>
+              <MessageList
+                messages={messages}
+                recipient={activeRecipient}
+                isDraft={true}
+              />
+              <MessageComposer disabled={false} />
+            </>
+          ) : (
+            <>
+              <div className={styles.emptyCenter}>
+                <span className={styles.emptyTitle}>New conversation</span>
+                <span className={styles.emptySubtitle}>
+                  Search for a colleague above to start a 1:1 direct chat
+                </span>
+              </div>
+              <MessageComposer disabled={true} />
+            </>
+          )}
+        </>
+      ) : activeConversation && activeConversation.otherParticipant ? (
+        <>
+          <ChatHeader participant={activeConversation.otherParticipant} />
+          <MessageList
+            messages={messages}
+            recipient={activeConversation.otherParticipant}
+            isDraft={false}
+          />
+          <MessageComposer disabled={false} />
+        </>
+      ) : (
+        <div className={styles.emptyCenter}>
           <img
             src="/illustrations/empty-chat.svg"
-            alt="BCC Teams Chat"
+            alt="No conversation selected"
             className={styles.emptyImg}
           />
-          <div className={styles.title}>Welcome to BCC Teams Chat</div>
-          <div className={styles.description}>
-            Real-time 1:1 and group messaging, rich text composer, emoji reactions,
-            threaded replies, and file attachments will be available starting with Feature C-001.
-          </div>
-
-          <div className={styles.badgeCard}>
-            <Badge appearance="tint" color="brand">Phase 2</Badge>
-            <Caption1 style={{ color: tokens.colorNeutralForeground2 }}>
-              Feature C-001: 1:1 Direct Messaging launching next
-            </Caption1>
-          </div>
+          <span className={styles.emptyTitle}>Select a chat to start messaging</span>
+          <span className={styles.emptySubtitle}>
+            Choose a colleague from your conversations list on the left, or click below to start a new 1:1 chat.
+          </span>
+          <Button
+            appearance="primary"
+            icon={<ComposeRegular />}
+            onClick={() => startDraftChat()}
+            size="medium"
+          >
+            New Chat
+          </Button>
         </div>
-      </div>
+      )}
     </div>
   );
 };

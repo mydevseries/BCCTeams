@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthContext';
 interface PresenceContextType {
   myPresence: PresenceState;
   presences: Record<string, PresenceState>;
+  socket: Socket | null;
   setMyStatus: (status: PresenceStatus, isManual?: boolean) => Promise<void>;
   setMyStatusMessage: (message: string, expiresAt?: string | null) => Promise<void>;
   clearMyStatusMessage: () => Promise<void>;
@@ -29,6 +30,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { user, token } = useAuth();
   const [myPresence, setMyPresence] = useState<PresenceState>(defaultPresence);
   const [presences, setPresences] = useState<Record<string, PresenceState>>({});
+  const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const lastHeartbeatRef = useRef<number>(0);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -56,21 +58,23 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
+        setSocket(null);
       }
       return;
     }
 
     const socketUrl = window.location.origin;
-    const socket = io(socketUrl, {
+    const newSocket = io(socketUrl, {
       transports: ['websocket', 'polling'],
       autoConnect: true,
       reconnection: true,
     });
-    socketRef.current = socket;
+    socketRef.current = newSocket;
+    setSocket(newSocket);
 
-    socket.on('connect', () => {
+    newSocket.on('connect', () => {
       // Initialize presence for this user connection
-      socket.emit('presence:init', { userId: user.id }, (res: any) => {
+      newSocket.emit('presence:init', { userId: user.id }, (res: any) => {
         if (res?.presence) {
           setMyPresence(res.presence);
         }
@@ -78,14 +82,14 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       // Resubscribe to visible users on reconnect
       if (subscribedUserIdsRef.current.size > 0) {
-        socket.emit('presence:subscribe', {
+        newSocket.emit('presence:subscribe', {
           userIds: Array.from(subscribedUserIdsRef.current),
         });
       }
     });
 
     // Listen for scoped presence changes
-    socket.on('presence:changed', (data: PresenceState) => {
+    newSocket.on('presence:changed', (data: PresenceState) => {
       if (data.userId === user.id) {
         setMyPresence((prev) => ({
           ...prev,
@@ -101,8 +105,9 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     fetchMyPresence();
 
     return () => {
-      socket.disconnect();
+      newSocket.disconnect();
       socketRef.current = null;
+      setSocket(null);
     };
   }, [user, token, fetchMyPresence]);
 
@@ -110,7 +115,6 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const setMyStatus = useCallback(
     async (status: PresenceStatus, isManual = true) => {
       if (!token) return;
-
       try {
         const res = await fetch('/api/presence/me', {
           method: 'PATCH',
@@ -120,7 +124,6 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           },
           body: JSON.stringify({ status, isManual }),
         });
-
         if (res.ok) {
           const updated = await res.json();
           setMyPresence(updated);
@@ -129,14 +132,13 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Failed to update presence status', err);
       }
     },
-    [token],
+    [token]
   );
 
-  // Set custom status message with expiry
+  // Set status message
   const setMyStatusMessage = useCallback(
     async (message: string, expiresAt?: string | null) => {
       if (!token) return;
-
       try {
         const res = await fetch('/api/presence/me', {
           method: 'PATCH',
@@ -149,22 +151,20 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             statusExpiresAt: expiresAt || null,
           }),
         });
-
         if (res.ok) {
           const updated = await res.json();
           setMyPresence(updated);
         }
       } catch (err) {
-        console.error('Failed to update status message', err);
+        console.error('Failed to set status message', err);
       }
     },
-    [token],
+    [token]
   );
 
-  // Clear custom status message
+  // Clear status message
   const clearMyStatusMessage = useCallback(async () => {
     if (!token) return;
-
     try {
       const res = await fetch('/api/presence/me', {
         method: 'PATCH',
@@ -174,7 +174,6 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         },
         body: JSON.stringify({ clearMessage: true }),
       });
-
       if (res.ok) {
         const updated = await res.json();
         setMyPresence(updated);
@@ -184,64 +183,27 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [token]);
 
-  // Subscribe to visible users
-  const subscribeUsers = useCallback(
-    (userIds: string[]) => {
-      const newIds = userIds.filter((id) => id && !subscribedUserIdsRef.current.has(id));
-      if (newIds.length === 0) return;
+  // Dynamic user subscriptions for presence
+  const subscribeUsers = useCallback((userIds: string[]) => {
+    if (!socketRef.current || !userIds || userIds.length === 0) return;
 
-      for (const id of newIds) {
-        subscribedUserIdsRef.current.add(id);
-      }
+    const toSubscribe = userIds.filter((id) => !subscribedUserIdsRef.current.has(id));
+    if (toSubscribe.length === 0) return;
 
-      if (socketRef.current?.connected) {
-        socketRef.current.emit(
-          'presence:subscribe',
-          { userIds: newIds },
-          (res: any) => {
-            if (res?.presences) {
-              setPresences((prev) => ({
-                ...prev,
-                ...res.presences,
-              }));
-            }
-          },
-        );
-      } else {
-        // Fallback fetch via REST batch
-        if (token) {
-          fetch('/api/presence/batch', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ userIds: newIds }),
-          })
-            .then((res) => res.json())
-            .then((batch) => {
-              setPresences((prev) => ({ ...prev, ...batch }));
-            })
-            .catch(() => {});
-        }
-      }
-    },
-    [token],
-  );
+    toSubscribe.forEach((id) => subscribedUserIdsRef.current.add(id));
+    socketRef.current.emit('presence:subscribe', { userIds: toSubscribe });
+  }, []);
 
-  // Unsubscribe from users
   const unsubscribeUsers = useCallback((userIds: string[]) => {
-    for (const id of userIds) {
-      subscribedUserIdsRef.current.delete(id);
-    }
-    if (socketRef.current?.connected) {
-      socketRef.current.emit('presence:unsubscribe', { userIds });
-    }
+    if (!socketRef.current || !userIds || userIds.length === 0) return;
+
+    userIds.forEach((id) => subscribedUserIdsRef.current.delete(id));
+    socketRef.current.emit('presence:unsubscribe', { userIds });
   }, []);
 
   const getUserPresence = useCallback(
     (userId: string): PresenceState => {
-      if (user && userId === user.id) return myPresence;
+      if (userId === user?.id) return myPresence;
       return (
         presences[userId] || {
           userId,
@@ -250,54 +212,62 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
       );
     },
-    [user, myPresence, presences],
+    [user?.id, myPresence, presences]
   );
 
-  // Inactivity tracking (5 minutes) and Heartbeat throttling
+  // Activity detection & idle timer (5 minutes inactivity -> Away)
   useEffect(() => {
     if (!user || !token) return;
 
-    const resetIdleTimer = () => {
-      // Throttle socket heartbeat (at most once every 15 seconds)
+    const IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+    const HEARTBEAT_INTERVAL_MS = 15 * 1000;
+
+    const sendHeartbeat = () => {
       const now = Date.now();
-      if (now - lastHeartbeatRef.current > 15000) {
+      if (now - lastHeartbeatRef.current >= HEARTBEAT_INTERVAL_MS) {
         lastHeartbeatRef.current = now;
-        if (socketRef.current?.connected) {
+        if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit('presence:heartbeat', { userId: user.id });
         }
       }
+    };
 
-      // If user was automatically set to Away, restore to Available immediately upon activity
+    const handleUserActivity = () => {
+      sendHeartbeat();
+
+      // If user was automatically transitioned to Away and is NOT manually away, restore Available
       if (myPresence.status === 'AWAY' && !myPresence.isManual) {
         setMyStatus('AVAILABLE', false);
       }
 
-      // Reset 5-minute inactivity timer
+      // Reset 5-minute idle timer
       if (idleTimerRef.current) {
         clearTimeout(idleTimerRef.current);
       }
-
       idleTimerRef.current = setTimeout(() => {
-        // If status was AVAILABLE and NOT manual, transition to auto-Away
-        if (myPresence.status === 'AVAILABLE' && !myPresence.isManual) {
+        // Automatically set to AWAY if not manually set to another status
+        if (!myPresence.isManual && myPresence.status !== 'OFFLINE') {
           setMyStatus('AWAY', false);
         }
-      }, 5 * 60 * 1000); // 5 minutes
+      }, IDLE_TIMEOUT_MS);
     };
 
-    // User activity events
-    const events = ['mousemove', 'keydown', 'pointerdown', 'scroll', 'touchstart'];
-    for (const evt of events) {
-      window.addEventListener(evt, resetIdleTimer, { passive: true });
-    }
+    // Attach DOM event listeners for user input
+    const activityEvents = ['mousemove', 'keydown', 'mousedown', 'touchstart', 'scroll'];
+    activityEvents.forEach((ev) => window.addEventListener(ev, handleUserActivity, { passive: true }));
 
-    // Initialize timer
-    resetIdleTimer();
+    // Initial heartbeat
+    sendHeartbeat();
+
+    // Start idle timer
+    idleTimerRef.current = setTimeout(() => {
+      if (!myPresence.isManual && myPresence.status !== 'OFFLINE') {
+        setMyStatus('AWAY', false);
+      }
+    }, IDLE_TIMEOUT_MS);
 
     return () => {
-      for (const evt of events) {
-        window.removeEventListener(evt, resetIdleTimer);
-      }
+      activityEvents.forEach((ev) => window.removeEventListener(ev, handleUserActivity));
       if (idleTimerRef.current) {
         clearTimeout(idleTimerRef.current);
       }
@@ -309,6 +279,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         myPresence,
         presences,
+        socket,
         setMyStatus,
         setMyStatusMessage,
         clearMyStatusMessage,
@@ -329,4 +300,3 @@ export const usePresence = (): PresenceContextType => {
   }
   return context;
 };
-

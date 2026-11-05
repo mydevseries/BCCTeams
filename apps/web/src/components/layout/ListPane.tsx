@@ -15,6 +15,8 @@ import {
 } from '@fluentui/react-icons';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { navItems } from './AppBar';
+import { useChat } from '../../chat/ChatContext';
+import { ChatList } from '../../chat/ChatList';
 
 const useStyles = makeStyles({
   listPane: {
@@ -140,6 +142,7 @@ export const ListPane: React.FC = () => {
   const styles = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
+  const { startDraftChat } = useChat();
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'mentions'>('all');
 
@@ -156,7 +159,18 @@ export const ListPane: React.FC = () => {
             <Button appearance="subtle" icon={<FilterRegular fontSize={18} />} size="small" aria-label="Filter" />
           </Tooltip>
           <Tooltip content="New conversation" relationship="label">
-            <Button appearance="subtle" icon={<ComposeRegular fontSize={18} />} size="small" aria-label="New" />
+            <Button
+              appearance="subtle"
+              icon={<ComposeRegular fontSize={18} />}
+              size="small"
+              aria-label="New conversation"
+              onClick={() => {
+                startDraftChat();
+                if (!location.pathname.startsWith('/chat')) {
+                  navigate('/chat');
+                }
+              }}
+            />
           </Tooltip>
         </div>
       </div>
@@ -184,12 +198,7 @@ export const ListPane: React.FC = () => {
 
       <div className={styles.listPaneContent}>
         {currentTab?.id === 'chat' && (
-          <div style={{ padding: '24px 16px', textAlign: 'center' }}>
-            <Body1 style={{ color: tokens.colorNeutralForeground2, display: 'block', marginBottom: '8px' }}>
-              No conversations yet
-            </Body1>
-            <Badge appearance="tint" color="brand">Coming soon (C-001)</Badge>
-          </div>
+          <ChatList filter={activeFilter} />
         )}
 
         {currentTab?.id === 'activity' && (
@@ -260,4 +269,3 @@ export const ListPane: React.FC = () => {
     </aside>
   );
 };
-
