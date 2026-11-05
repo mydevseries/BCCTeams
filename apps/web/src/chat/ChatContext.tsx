@@ -28,6 +28,10 @@ interface ChatContextType {
   ) => Promise<void>;
   removeParticipant: (conversationId: string, userId: string) => Promise<void>;
   leaveGroup: (conversationId: string) => Promise<void>;
+  togglePin: (conversationId: string) => Promise<void>;
+  toggleMute: (conversationId: string) => Promise<void>;
+  hideConversation: (conversationId: string) => Promise<void>;
+  markAsUnread: (conversationId: string) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
   loadConversations: () => Promise<void>;
 }
@@ -268,6 +272,82 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
+  // Toggle Pin
+  const togglePin = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/pin`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? { ...c, isPinned: !c.isPinned } : c))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle pin', err);
+    }
+  }, [token]);
+
+  // Toggle Mute
+  const toggleMute = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/mute`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? { ...c, isMuted: !c.isMuted } : c))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to toggle mute', err);
+    }
+  }, [token]);
+
+  // Hide conversation
+  const hideConversation = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/hide`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setConversations((prev) => prev.filter((c) => c.id !== conversationId));
+        if (activeConvIdRef.current === conversationId) {
+          setActiveConversationIdState(null);
+          setMessages([]);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to hide conversation', err);
+    }
+  }, [token]);
+
+  // Mark as unread
+  const markAsUnread = useCallback(async (conversationId: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/unread`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.id === conversationId ? { ...c, unreadCount: Math.max(1, (c.unreadCount || 0) + 1) } : c
+          )
+        );
+      }
+    } catch (err) {
+      console.error('Failed to mark as unread', err);
+    }
+  }, [token]);
+
   // Send message
   const sendMessage = useCallback(async (content: string) => {
     if (!token || !content.trim()) return;
@@ -450,6 +530,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addParticipant,
         removeParticipant,
         leaveGroup,
+        togglePin,
+        toggleMute,
+        hideConversation,
+        markAsUnread,
         sendMessage,
         loadConversations,
       }}
@@ -479,6 +563,10 @@ const defaultChatContext: ChatContextType = {
   addParticipant: async () => {},
   removeParticipant: async () => {},
   leaveGroup: async () => {},
+  togglePin: async () => {},
+  toggleMute: async () => {},
+  hideConversation: async () => {},
+  markAsUnread: async () => {},
   sendMessage: async () => {},
   loadConversations: async () => {},
 };

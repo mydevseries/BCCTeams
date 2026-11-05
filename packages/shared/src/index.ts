@@ -160,6 +160,9 @@ export interface ConversationSummary {
   participants: ChatParticipant[];
   lastMessage?: ChatMessage | null;
   unreadCount?: number;
+  isPinned?: boolean;
+  isMuted?: boolean;
+  isHidden?: boolean;
   otherParticipant?: ChatParticipant['user'];
 }
 
