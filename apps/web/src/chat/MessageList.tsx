@@ -6,12 +6,11 @@ import {
   Avatar,
   AvatarGroup,
 } from '@fluentui/react-components';
-import { CheckmarkRegular } from '@fluentui/react-icons';
 import { ChatMessage, MemberProfile } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
 import { useChat } from './ChatContext';
-import { RichTextRenderer } from './RichTextRenderer';
+import { MessageItem } from './MessageItem';
 
 const useStyles = makeStyles({
   container: {
@@ -48,62 +47,6 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
     maxWidth: '440px',
     marginTop: tokens.spacingVerticalS,
-  },
-  messageRow: {
-    display: 'flex',
-    ...shorthands.gap(tokens.spacingHorizontalM),
-    maxWidth: '85%',
-  },
-  messageRowOutgoing: {
-    alignSelf: 'flex-end',
-    flexDirection: 'row-reverse',
-  },
-  messageRowIncoming: {
-    alignSelf: 'flex-start',
-  },
-  messageBody: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('4px'),
-  },
-  messageHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap(tokens.spacingHorizontalS),
-  },
-  messageHeaderOutgoing: {
-    flexDirection: 'row-reverse',
-  },
-  senderName: {
-    fontSize: tokens.fontSizeBase200,
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-  },
-  timestamp: {
-    fontSize: tokens.fontSizeBase100,
-    color: tokens.colorNeutralForeground3,
-  },
-  statusReceipt: {
-    display: 'inline-flex',
-    alignItems: 'center',
-  },
-  bubble: {
-    ...shorthands.padding(tokens.spacingVerticalS, tokens.spacingHorizontalM),
-    ...shorthands.borderRadius(tokens.borderRadiusMedium),
-    fontSize: tokens.fontSizeBase300,
-    lineHeight: '20px',
-    wordBreak: 'break-word',
-    whiteSpace: 'pre-wrap',
-  },
-  bubbleOutgoing: {
-    backgroundColor: tokens.colorBrandBackground2,
-    color: tokens.colorBrandForeground2,
-    borderTopRightRadius: '2px',
-  },
-  bubbleIncoming: {
-    backgroundColor: tokens.colorNeutralBackground2,
-    color: tokens.colorNeutralForeground1,
-    borderTopLeftRadius: '2px',
   },
   systemMessageRow: {
     display: 'flex',
@@ -155,7 +98,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const styles = useStyles();
   const { user } = useAuth();
   const { getUserPresence } = usePresence();
-  const { activeConversation, typingUsers } = useChat();
+  const { activeConversation, typingUsers, toggleReaction } = useChat();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const typingNames = Object.values(typingUsers);
@@ -248,12 +191,6 @@ export const MessageList: React.FC<MessageListProps> = ({
         }
 
         const isOutgoing = msg.senderId === user?.id;
-        const senderDisplayName =
-          msg.sender?.displayName ||
-          (isOutgoing ? user?.displayName : recipient?.displayName) ||
-          'Colleague';
-
-        // Check if message is optimistic or has been read by another participant
         const isOptimistic = msg.id.startsWith('opt-');
         const isRead =
           !isOptimistic &&
@@ -265,61 +202,15 @@ export const MessageList: React.FC<MessageListProps> = ({
           );
 
         return (
-          <div
+          <MessageItem
             key={msg.id}
-            className={`${styles.messageRow} ${isOutgoing ? styles.messageRowOutgoing : styles.messageRowIncoming}`}
-          >
-            <Avatar
-              name={senderDisplayName}
-              image={msg.sender?.avatarUrl ? { src: msg.sender.avatarUrl } : undefined}
-              size={32}
-            />
-
-            <div className={styles.messageBody}>
-              <div className={`${styles.messageHeader} ${isOutgoing ? styles.messageHeaderOutgoing : ''}`}>
-                <span className={styles.senderName}>{senderDisplayName}</span>
-                <span className={styles.timestamp}>{formatMessageTime(msg.createdAt)}</span>
-
-                {isOutgoing && (
-                  <span
-                    className={styles.statusReceipt}
-                    aria-label={isOptimistic ? 'Sending' : isRead ? 'Read' : 'Sent'}
-                    title={isOptimistic ? 'Sending...' : isRead ? 'Read by recipient' : 'Sent'}
-                  >
-                    {isRead ? (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          color: tokens.colorBrandForeground1,
-                        }}
-                      >
-                        <CheckmarkRegular fontSize={13} />
-                        <CheckmarkRegular fontSize={13} style={{ marginLeft: -6 }} />
-                      </span>
-                    ) : (
-                      <span
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          color: tokens.colorNeutralForeground4,
-                          opacity: isOptimistic ? 0.6 : 1,
-                        }}
-                      >
-                        <CheckmarkRegular fontSize={13} />
-                      </span>
-                    )}
-                  </span>
-                )}
-              </div>
-
-              <div
-                className={`${styles.bubble} ${isOutgoing ? styles.bubbleOutgoing : styles.bubbleIncoming}`}
-              >
-                <RichTextRenderer content={msg.content} />
-              </div>
-            </div>
-          </div>
+            message={msg}
+            currentUserId={user?.id}
+            currentUserDisplayName={user?.displayName}
+            recipient={recipient}
+            isRead={isRead}
+            onToggleReaction={(messageId, emoji) => toggleReaction(messageId, emoji)}
+          />
         );
       })}
 

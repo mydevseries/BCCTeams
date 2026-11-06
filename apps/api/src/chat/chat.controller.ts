@@ -170,4 +170,14 @@ export class ChatController {
     const user = req.user as { id: string };
     return this.chatService.hideConversation(conversationId, user.id);
   }
+
+  @Post('messages/:messageId/reactions')
+  async toggleReaction(
+    @Req() req: Request,
+    @Param('messageId') messageId: string,
+    @Body('emoji') emoji: string,
+  ) {
+    const user = req.user as { id: string };
+    return this.chatService.toggleReaction(messageId, user.id, emoji);
+  }
 }

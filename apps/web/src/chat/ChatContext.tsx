@@ -33,6 +33,7 @@ interface ChatContextType {
   hideConversation: (conversationId: string) => Promise<void>;
   markAsUnread: (conversationId: string) => Promise<void>;
   markAsRead: (conversationId: string) => Promise<void>;
+  toggleReaction: (messageId: string, emoji: string) => Promise<void>;
   typingUsers: Record<string, string>;
   sendTyping: (isTyping: boolean) => void;
   sendMessage: (content: string) => Promise<void>;
@@ -384,6 +385,93 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
+  // Toggle message reaction with instant optimistic update
+  const toggleReaction = useCallback(
+    async (messageId: string, emoji: string) => {
+      if (!token || !user) return;
+
+      // 1. Instant optimistic update
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const currentReactions = m.reactions || [];
+          const existingIdx = currentReactions.findIndex((r) => r.emoji === emoji);
+
+          let nextReactions: MessageReactionSummary[];
+          if (existingIdx !== -1) {
+            const existing = currentReactions[existingIdx];
+            if (existing.hasReacted) {
+              // Remove my reaction
+              if (existing.count <= 1) {
+                nextReactions = currentReactions.filter((r) => r.emoji !== emoji);
+              } else {
+                nextReactions = currentReactions.map((r) =>
+                  r.emoji === emoji
+                    ? {
+                        ...r,
+                        count: r.count - 1,
+                        users: r.users.filter((u) => u.id !== user.id),
+                        hasReacted: false,
+                      }
+                    : r
+                );
+              }
+            } else {
+              // Add my reaction
+              nextReactions = currentReactions.map((r) =>
+                r.emoji === emoji
+                  ? {
+                      ...r,
+                      count: r.count + 1,
+                      users: [...r.users, { id: user.id, displayName: user.displayName }],
+                      hasReacted: true,
+                    }
+                  : r
+              );
+            }
+          } else {
+            // New emoji reaction
+            nextReactions = [
+              ...currentReactions,
+              {
+                emoji,
+                count: 1,
+                users: [{ id: user.id, displayName: user.displayName }],
+                hasReacted: true,
+              },
+            ];
+          }
+
+          return { ...m, reactions: nextReactions };
+        })
+      );
+
+      // 2. Dispatch to server in background
+      try {
+        const res = await fetch(`/api/chat/messages/${messageId}/reactions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ emoji }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.reactions) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === messageId ? { ...m, reactions: data.reactions } : m))
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Failed to toggle reaction', err);
+      }
+    },
+    [token, user]
+  );
+
   // Send typing indicator
   const sendTyping = useCallback(
     (isTyping: boolean) => {
@@ -646,11 +734,34 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     };
 
+    const handleReaction = (payload: {
+      conversationId: string;
+      messageId: string;
+      reactions: MessageReactionSummary[];
+    }) => {
+      if (activeConvIdRef.current === payload.conversationId) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === payload.messageId
+              ? {
+                  ...m,
+                  reactions: payload.reactions.map((r) => ({
+                    ...r,
+                    hasReacted: r.users.some((u) => u.id === user?.id),
+                  })),
+                }
+              : m
+          )
+        );
+      }
+    };
+
     socket.on('chat:message', handleMessage);
     socket.on('chat:conversation_updated', handleConversationUpdated);
     socket.on('chat:participant_removed', handleParticipantRemoved);
     socket.on('chat:typing', handleTyping);
     socket.on('chat:read', handleRead);
+    socket.on('chat:reaction', handleReaction);
 
     return () => {
       socket.off('chat:message', handleMessage);
@@ -658,6 +769,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       socket.off('chat:participant_removed', handleParticipantRemoved);
       socket.off('chat:typing', handleTyping);
       socket.off('chat:read', handleRead);
+      socket.off('chat:reaction', handleReaction);
     };
   }, [socket, user?.id, loadConversations]);
 
@@ -691,6 +803,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         hideConversation,
         markAsUnread,
         markAsRead,
+        toggleReaction,
         typingUsers,
         sendTyping,
         sendMessage,
@@ -729,6 +842,7 @@ const defaultChatContext: ChatContextType = {
   hideConversation: async () => {},
   markAsUnread: async () => {},
   markAsRead: async () => {},
+  toggleReaction: async () => {},
   sendMessage: async () => {},
   loadConversations: async () => {},
 };
