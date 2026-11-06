@@ -111,10 +111,35 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
   }, [user, token, fetchMyPresence]);
 
-  // Set user presence status
+  // Set user presence status with instant optimistic update
   const setMyStatus = useCallback(
     async (status: PresenceStatus, isManual = true) => {
       if (!token) return;
+
+      // 1. Instant optimistic update (0ms perceived latency)
+      setMyPresence((prev) => ({
+        ...prev,
+        status,
+        isManual,
+      }));
+      if (user) {
+        setPresences((prev) => ({
+          ...prev,
+          [user.id]: {
+            ...(prev[user.id] || {
+              userId: user.id,
+              statusMessage: null,
+              lastActiveAt: new Date(),
+            }),
+            userId: user.id,
+            status,
+            isManual,
+            lastActiveAt: new Date(),
+          },
+        }));
+      }
+
+      // 2. Synchronize with backend in background
       try {
         const res = await fetch('/api/presence/me', {
           method: 'PATCH',
@@ -132,13 +157,37 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Failed to update presence status', err);
       }
     },
-    [token]
+    [token, user]
   );
 
-  // Set status message
+  // Set status message with instant optimistic update
   const setMyStatusMessage = useCallback(
     async (message: string, expiresAt?: string | null) => {
       if (!token) return;
+
+      // 1. Instant optimistic update
+      setMyPresence((prev) => ({
+        ...prev,
+        statusMessage: message,
+        statusExpiresAt: expiresAt ? new Date(expiresAt) : null,
+      }));
+      if (user) {
+        setPresences((prev) => ({
+          ...prev,
+          [user.id]: {
+            ...(prev[user.id] || {
+              userId: user.id,
+              status: 'AVAILABLE' as PresenceStatus,
+              isManual: false,
+              lastActiveAt: new Date(),
+            }),
+            statusMessage: message,
+            statusExpiresAt: expiresAt ? new Date(expiresAt) : null,
+          },
+        }));
+      }
+
+      // 2. Sync with backend
       try {
         const res = await fetch('/api/presence/me', {
           method: 'PATCH',
@@ -159,12 +208,36 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         console.error('Failed to set status message', err);
       }
     },
-    [token]
+    [token, user]
   );
 
-  // Clear status message
+  // Clear status message with instant optimistic update
   const clearMyStatusMessage = useCallback(async () => {
     if (!token) return;
+
+    // 1. Instant optimistic update
+    setMyPresence((prev) => ({
+      ...prev,
+      statusMessage: null,
+      statusExpiresAt: null,
+    }));
+    if (user) {
+      setPresences((prev) => ({
+        ...prev,
+        [user.id]: {
+          ...(prev[user.id] || {
+            userId: user.id,
+            status: 'AVAILABLE' as PresenceStatus,
+            isManual: false,
+            lastActiveAt: new Date(),
+          }),
+          statusMessage: null,
+          statusExpiresAt: null,
+        },
+      }));
+    }
+
+    // 2. Sync with backend
     try {
       const res = await fetch('/api/presence/me', {
         method: 'PATCH',
@@ -181,7 +254,7 @@ export const PresenceProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (err) {
       console.error('Failed to clear status message', err);
     }
-  }, [token]);
+  }, [token, user]);
 
   // Dynamic user subscriptions for presence
   const subscribeUsers = useCallback((userIds: string[]) => {

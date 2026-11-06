@@ -58,6 +58,7 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSelectMember }) => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchCacheRef = useRef<Map<string, MemberProfile[]>>(new Map());
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -80,7 +81,17 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSelectMember }) => {
   }, []);
 
   useEffect(() => {
-    if (!query.trim()) { setPeople([]); setIsLoading(false); return; }
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) { setPeople([]); setIsLoading(false); return; }
+
+    if (searchCacheRef.current.has(trimmed)) {
+      const found = searchCacheRef.current.get(trimmed)!;
+      setPeople(found);
+      subscribeUsers(found.map((u) => u.id));
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     const timer = setTimeout(async () => {
       try {
@@ -90,11 +101,12 @@ export const SearchBox: React.FC<SearchBoxProps> = ({ onSelectMember }) => {
         if (res.ok) {
           const data = await res.json();
           const found: MemberProfile[] = data.users || [];
+          searchCacheRef.current.set(trimmed, found);
           setPeople(found);
           subscribeUsers(found.map((u) => u.id));
         }
       } catch { /* ignore */ } finally { setIsLoading(false); }
-    }, 150);
+    }, 120);
     return () => clearTimeout(timer);
   }, [query, token, subscribeUsers]);
 

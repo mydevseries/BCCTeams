@@ -80,9 +80,14 @@ export class ChatService {
     }
     const presenceMap = await this.presenceService.getBatchPresence(Array.from(allUserIds));
 
-    // Calculate unread count for each conversation
+    // Calculate unread count for each conversation (optimized: skip conversations with no newer messages)
     const unreadCounts = await Promise.all(
       userParticipants.map(async (up) => {
+        const latestMsg = up.conversation?.messages?.[0];
+        // If there are no messages, or the newest message is not newer than lastReadAt, count is 0
+        if (!latestMsg || new Date(latestMsg.createdAt) <= new Date(up.lastReadAt)) {
+          return 0;
+        }
         return this.prisma.message.count({
           where: {
             conversationId: up.conversationId,
@@ -160,6 +165,126 @@ export class ChatService {
           otherParticipant,
         };
       });
+  }
+
+  /**
+   * Fast targeted lookup of a single conversation summary without scanning all user conversations.
+   */
+  async getSingleConversationSummary(conversationId: string, userId: string): Promise<ConversationSummary | null> {
+    const up = await this.prisma.conversationParticipant.findUnique({
+      where: { conversationId_userId: { conversationId, userId } },
+      include: {
+        conversation: {
+          include: {
+            participants: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    displayName: true,
+                    avatarUrl: true,
+                    jobTitle: true,
+                    department: true,
+                    role: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+            },
+            messages: {
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+              include: {
+                sender: {
+                  select: {
+                    id: true,
+                    email: true,
+                    displayName: true,
+                    avatarUrl: true,
+                    jobTitle: true,
+                    department: true,
+                    role: true,
+                    createdAt: true,
+                    updatedAt: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!up || !up.conversation) {
+      const all = await this.getUserConversations(userId);
+      return all.find((c) => c.id === conversationId) || null;
+    }
+
+    const conv = up.conversation;
+    const allUserIds = conv.participants.map((p) => p.userId);
+    const presenceMap = await this.presenceService.getBatchPresence(allUserIds);
+
+    const participants: ChatParticipant[] = conv.participants.map((p) => {
+      const pres = presenceMap[p.userId];
+      return {
+        id: p.id,
+        conversationId: p.conversationId,
+        userId: p.userId,
+        role: p.role,
+        joinedAt: p.joinedAt,
+        lastReadAt: p.lastReadAt,
+        isPinned: p.isPinned,
+        isMuted: p.isMuted,
+        user: {
+          ...p.user,
+          presence: pres
+            ? {
+                status: pres.status,
+                statusMessage: pres.statusMessage,
+                statusExpiresAt: pres.statusExpiresAt,
+              }
+            : null,
+        },
+      };
+    });
+
+    const otherParticipant =
+      conv.type === 'DIRECT'
+        ? participants.find((p) => p.userId !== userId)?.user
+        : undefined;
+
+    const lastMessage: ChatMessage | null = conv.messages[0]
+      ? ({
+          id: conv.messages[0].id,
+          conversationId: conv.messages[0].conversationId,
+          senderId: conv.messages[0].senderId,
+          content: conv.messages[0].content,
+          isEdited: conv.messages[0].isEdited,
+          isDeleted: conv.messages[0].isDeleted,
+          isSystem: conv.messages[0].isSystem,
+          systemAction: conv.messages[0].systemAction,
+          createdAt: conv.messages[0].createdAt,
+          updatedAt: conv.messages[0].updatedAt,
+          sender: conv.messages[0].sender,
+        } as unknown as ChatMessage)
+      : null;
+
+    return {
+      id: conv.id,
+      type: conv.type,
+      title: conv.title,
+      createdAt: conv.createdAt,
+      updatedAt: conv.updatedAt,
+      participants,
+      lastMessage,
+      unreadCount: 0,
+      isPinned: up.isPinned,
+      isMuted: up.isMuted,
+      isHidden: up.isHidden,
+      otherParticipant,
+    };
   }
 
   async getDirectConversation(userId: string, recipientId: string) {
@@ -387,9 +512,8 @@ export class ChatService {
       this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:message', createdMessage);
     }
 
-    // Fetch full summary to return and emit
-    const conversations = await this.getUserConversations(userId);
-    const summary = conversations.find((c) => c.id === conv!.id)!;
+    // Fetch single conversation summary directly
+    const summary = (await this.getSingleConversationSummary(conv!.id, userId))!;
 
     // Notify recipient's user room of conversation update
     this.eventsGateway.emitToRoom(`user:${recipientId}`, 'chat:conversation_updated', summary);
@@ -548,8 +672,7 @@ export class ChatService {
       },
     });
 
-    const conversations = await this.getUserConversations(userId);
-    const summary = conversations.find((c) => c.id === conversationId)!;
+    const summary = (await this.getSingleConversationSummary(conversationId, userId))!;
 
     // Broadcast
     this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
@@ -653,8 +776,7 @@ export class ChatService {
       data: { updatedAt: new Date() },
     });
 
-    const conversations = await this.getUserConversations(actorId);
-    const summary = conversations.find((c) => c.id === conversationId)!;
+    const summary = (await this.getSingleConversationSummary(conversationId, actorId))!;
 
     this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
     this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
@@ -758,15 +880,15 @@ export class ChatService {
     });
 
     if (remaining.length > 0) {
-      const conversations = await this.getUserConversations(remaining[0].userId);
-      const summary = conversations.find((c) => c.id === conversationId);
+      const summary = await this.getSingleConversationSummary(conversationId, remaining[0].userId);
+      if (summary) {
+        this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
+        this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
 
-      this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:conversation_updated', summary);
-      this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', systemMessage);
-
-      for (const p of remaining) {
-        this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:conversation_updated', summary);
-        this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', systemMessage);
+        for (const p of remaining) {
+          this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:conversation_updated', summary);
+          this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', systemMessage);
+        }
       }
     }
 
@@ -854,65 +976,62 @@ export class ChatService {
       throw new ForbiddenException('You are not a participant in this conversation');
     }
 
-    const message = await this.prisma.message.create({
-      data: {
-        conversationId,
-        senderId,
-        content: content.trim(),
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            email: true,
-            displayName: true,
-            avatarUrl: true,
-            jobTitle: true,
-            department: true,
-            role: true,
-            createdAt: true,
-            updatedAt: true,
+    const now = new Date();
+    const [message, , , , allParticipants] = await Promise.all([
+      this.prisma.message.create({
+        data: {
+          conversationId,
+          senderId,
+          content: content.trim(),
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              email: true,
+              displayName: true,
+              avatarUrl: true,
+              jobTitle: true,
+              department: true,
+              role: true,
+              createdAt: true,
+              updatedAt: true,
+            },
           },
         },
-      },
-    });
-
-    await this.prisma.conversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
-    });
-
-    // Update sender's lastReadAt
-    await this.prisma.conversationParticipant.update({
-      where: {
-        conversationId_userId: {
-          conversationId,
-          userId: senderId,
+      }),
+      this.prisma.conversation.update({
+        where: { id: conversationId },
+        data: { updatedAt: now },
+      }),
+      this.prisma.conversationParticipant.update({
+        where: {
+          conversationId_userId: {
+            conversationId,
+            userId: senderId,
+          },
         },
-      },
-      data: {
-        lastReadAt: new Date(),
-      },
-    });
-
-    // Unhide conversation for any participants who hid it
-    await this.prisma.conversationParticipant.updateMany({
-      where: {
-        conversationId,
-        isHidden: true,
-      },
-      data: {
-        isHidden: false,
-      },
-    });
+        data: {
+          lastReadAt: now,
+        },
+      }),
+      this.prisma.conversationParticipant.updateMany({
+        where: {
+          conversationId,
+          isHidden: true,
+        },
+        data: {
+          isHidden: false,
+        },
+      }),
+      this.prisma.conversationParticipant.findMany({
+        where: { conversationId },
+        select: { userId: true },
+      }),
+    ]);
 
     // Broadcast message to chat room and to participant user rooms
     this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', message);
-
-    const allParticipants = await this.prisma.conversationParticipant.findMany({
-      where: { conversationId },
-      select: { userId: true },
-    });
 
     for (const p of allParticipants) {
       this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', message);

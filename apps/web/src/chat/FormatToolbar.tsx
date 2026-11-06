@@ -190,4 +190,3 @@ export const FormatToolbar: React.FC<FormatToolbarProps> = ({
     </Toolbar>
   );
 };
-

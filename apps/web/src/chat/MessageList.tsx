@@ -253,8 +253,10 @@ export const MessageList: React.FC<MessageListProps> = ({
           (isOutgoing ? user?.displayName : recipient?.displayName) ||
           'Colleague';
 
-        // Check if message has been read by another participant
+        // Check if message is optimistic or has been read by another participant
+        const isOptimistic = msg.id.startsWith('opt-');
         const isRead =
+          !isOptimistic &&
           isOutgoing &&
           Boolean(
             activeConversation?.participants
@@ -281,8 +283,8 @@ export const MessageList: React.FC<MessageListProps> = ({
                 {isOutgoing && (
                   <span
                     className={styles.statusReceipt}
-                    aria-label={isRead ? 'Read' : 'Sent'}
-                    title={isRead ? 'Read by recipient' : 'Sent'}
+                    aria-label={isOptimistic ? 'Sending' : isRead ? 'Read' : 'Sent'}
+                    title={isOptimistic ? 'Sending...' : isRead ? 'Read by recipient' : 'Sent'}
                   >
                     {isRead ? (
                       <span
@@ -301,6 +303,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                           display: 'inline-flex',
                           alignItems: 'center',
                           color: tokens.colorNeutralForeground4,
+                          opacity: isOptimistic ? 0.6 : 1,
                         }}
                       >
                         <CheckmarkRegular fontSize={13} />

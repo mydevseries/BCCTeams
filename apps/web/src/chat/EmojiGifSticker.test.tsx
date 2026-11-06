@@ -125,4 +125,3 @@ describe('Emoji, GIFs, and Stickers (C-006)', () => {
     expect(images[1]).toHaveAttribute('src', expect.stringContaining('data:image/svg+xml'));
   });
 });
-

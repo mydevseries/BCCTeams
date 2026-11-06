@@ -22,6 +22,8 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
   private socketToUser = new Map<string, string>();
   // 30-second disconnect grace timers: userId -> NodeJS.Timeout
   private disconnectTimers = new Map<string, NodeJS.Timeout>();
+  // In-memory presence cache for instant (0ms) read access
+  private presenceCache = new Map<string, PresenceState>();
 
   private expiryInterval: NodeJS.Timeout | null = null;
   private inactivityInterval: NodeJS.Timeout | null = null;
@@ -328,26 +330,45 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Get presence for a list of users (batch query).
+   * Get presence for a list of users (batch query with cache).
    */
   async getBatchPresence(userIds: string[]): Promise<Record<string, PresenceState>> {
-    const list = await this.prisma.presence.findMany({
-      where: { userId: { in: userIds } },
-    });
+    if (!userIds || userIds.length === 0) return {};
 
     const result: Record<string, PresenceState> = {};
-    for (const p of list) {
-      result[p.userId] = this.mapToState(p);
+    const missingIds: string[] = [];
+
+    for (const id of userIds) {
+      const cached = this.presenceCache.get(id);
+      if (cached) {
+        result[id] = cached;
+      } else {
+        missingIds.push(id);
+      }
     }
 
-    // Default missing users to OFFLINE
-    for (const id of userIds) {
-      if (!result[id]) {
-        result[id] = {
-          userId: id,
-          status: 'OFFLINE',
-          lastActiveAt: new Date(),
-        };
+    if (missingIds.length > 0) {
+      const list = await this.prisma.presence.findMany({
+        where: { userId: { in: missingIds } },
+      });
+
+      for (const p of list) {
+        const state = this.mapToState(p);
+        this.presenceCache.set(p.userId, state);
+        result[p.userId] = state;
+      }
+
+      // Default missing users to OFFLINE
+      for (const id of missingIds) {
+        if (!result[id]) {
+          const offlineState: PresenceState = {
+            userId: id,
+            status: 'OFFLINE',
+            lastActiveAt: new Date(),
+          };
+          this.presenceCache.set(id, offlineState);
+          result[id] = offlineState;
+        }
       }
     }
 
@@ -358,6 +379,10 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
    * DND Helper for notifications service.
    */
   async isDnd(userId: string): Promise<boolean> {
+    const cached = this.presenceCache.get(userId);
+    if (cached) {
+      return cached.status === 'DO_NOT_DISTURB';
+    }
     const p = await this.prisma.presence.findUnique({
       where: { userId },
       select: { status: true },
@@ -370,6 +395,7 @@ export class PresenceService implements OnModuleInit, OnModuleDestroy {
    */
   public broadcastPresence(userId: string, presence: Presence | PresenceState) {
     const state: PresenceState = 'updatedAt' in presence ? this.mapToState(presence) : presence;
+    this.presenceCache.set(userId, state);
     // Scoped presence room for all clients watching this user
     this.gateway.emitToRoom(`presence:${userId}`, 'presence:changed', state);
     // User room for syncing across the user's multiple open tabs

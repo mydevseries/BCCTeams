@@ -107,4 +107,3 @@ test.describe('C-005: Rich Text Formatting in Messages', () => {
     await context.close();
   });
 });
-

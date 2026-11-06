@@ -149,12 +149,25 @@ export const RecipientPicker: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchCacheRef = useRef<Map<string, MemberProfile[]>>(new Map());
 
-  // Search colleagues
+  // Search colleagues with caching
   useEffect(() => {
-    if (!token || !query.trim()) {
+    const trimmed = query.trim().toLowerCase();
+    if (!token || !trimmed) {
       setResults([]);
       setIsOpen(false);
+      return;
+    }
+
+    // Check client cache first for instant results (0ms)
+    if (searchCacheRef.current.has(trimmed)) {
+      const cached = searchCacheRef.current.get(trimmed)!;
+      const selectedIds = new Set(selectedRecipients.map((r) => r.id));
+      const filtered = cached.filter((m) => m.id !== currentUser?.id && !selectedIds.has(m.id));
+      setResults(filtered);
+      setIsOpen(filtered.length > 0);
+      setSelectedIndex(0);
       return;
     }
 
@@ -166,6 +179,7 @@ export const RecipientPicker: React.FC = () => {
         });
         if (res.ok) {
           const data: MemberProfile[] = await res.json();
+          searchCacheRef.current.set(trimmed, data);
           const selectedIds = new Set(selectedRecipients.map((r) => r.id));
           const filtered = data.filter((m) => m.id !== currentUser?.id && !selectedIds.has(m.id));
           setResults(filtered);
@@ -177,7 +191,7 @@ export const RecipientPicker: React.FC = () => {
       } finally {
         setLoading(false);
       }
-    }, 150);
+    }, 120);
 
     return () => clearTimeout(timer);
   }, [query, token, currentUser?.id, selectedRecipients]);

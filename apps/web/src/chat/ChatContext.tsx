@@ -169,11 +169,31 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setSelectedRecipients((prev) => prev.filter((r) => r.id !== recipientId));
   }, []);
 
-  // Select 1:1 recipient in recipient picker
+  // Select 1:1 recipient in recipient picker (instant switch with cache)
   const selectRecipient = useCallback(async (recipient: MemberProfile) => {
     if (!token) return;
     setSelectedRecipients([recipient]);
-    setIsLoading(true);
+
+    // Check if we already have this 1:1 conversation in memory
+    const existingConv = conversations.find(
+      (c) => c.type === 'DIRECT' && c.participants.some((p) => p.userId === recipient.id)
+    );
+
+    if (existingConv) {
+      // Instant switch (0ms)
+      setActiveConversationIdState(existingConv.id);
+      setIsDraft(false);
+      loadMessages(existingConv.id);
+      if (socket && socket.connected) {
+        socket.emit('room:join', `chat:${existingConv.id}`);
+      }
+      return;
+    }
+
+    // Default to draft immediately without blocking UI
+    setIsDraft(true);
+    setMessages([]);
+
     try {
       const res = await fetch(`/api/chat/direct/${recipient.id}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -181,25 +201,18 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.ok) {
         const data = await res.json();
         if (data.exists && data.conversation) {
-          // Existing 1:1 conversation found!
           setActiveConversationIdState(data.conversation.id);
           setIsDraft(false);
           setMessages(data.messages || []);
           if (socket && socket.connected) {
             socket.emit('room:join', `chat:${data.conversation.id}`);
           }
-        } else {
-          // New draft conversation
-          setIsDraft(true);
-          setMessages([]);
         }
       }
     } catch (err) {
       console.error('Failed to check direct conversation', err);
-    } finally {
-      setIsLoading(false);
     }
-  }, [token, socket]);
+  }, [token, socket, conversations, loadMessages]);
 
   // Update group title
   const updateGroupTitle = useCallback(async (conversationId: string, title: string) => {
@@ -385,14 +398,33 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     [socket, activeConversationId, user],
   );
 
-  // Send message
+  // Send message with instant optimistic updates (0ms perceived latency)
   const sendMessage = useCallback(async (content: string) => {
     if (!token || !content.trim()) return;
+    const trimmed = content.trim();
 
     if (isDraft && selectedRecipients.length > 0) {
-      setIsLoading(true);
+      const recipient = selectedRecipients[0];
+      const isSingleRecipient = selectedRecipients.length === 1;
+      const tempMsgId = `opt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const optimisticMsg: ChatMessage = {
+        id: tempMsgId,
+        conversationId: 'temp-draft',
+        senderId: user?.id || '',
+        content: trimmed,
+        isEdited: false,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sender: user || undefined,
+      };
+
+      // Instantly show message in thread
+      setMessages([optimisticMsg]);
+      setIsDraft(false);
+
       try {
-        if (selectedRecipients.length === 1) {
+        if (isSingleRecipient) {
           // Direct 1:1 conversation
           const res = await fetch('/api/chat/conversations/direct', {
             method: 'POST',
@@ -401,8 +433,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              recipientId: selectedRecipients[0].id,
-              initialMessage: content.trim(),
+              recipientId: recipient.id,
+              initialMessage: trimmed,
             }),
           });
           if (res.ok) {
@@ -411,9 +443,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newMsg: ChatMessage | undefined = data.message;
             setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
             setActiveConversationIdState(newConv.id);
-            setIsDraft(false);
             setSelectedRecipients([]);
-            if (newMsg) setMessages([newMsg]);
+            if (newMsg) {
+              setMessages([newMsg]);
+            }
             if (socket && socket.connected) {
               socket.emit('room:join', `chat:${newConv.id}`);
             }
@@ -429,7 +462,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             body: JSON.stringify({
               recipientIds: selectedRecipients.map((r) => r.id),
               title: draftTitle.trim() || undefined,
-              initialMessage: content.trim(),
+              initialMessage: trimmed,
             }),
           });
           if (res.ok) {
@@ -438,10 +471,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const newMsg: ChatMessage | undefined = data.message;
             setConversations((prev) => [newConv, ...prev.filter((c) => c.id !== newConv.id)]);
             setActiveConversationIdState(newConv.id);
-            setIsDraft(false);
             setSelectedRecipients([]);
             setDraftTitle('');
-            if (newMsg) setMessages([newMsg]);
+            if (newMsg) {
+              setMessages([newMsg]);
+            }
             if (socket && socket.connected) {
               socket.emit('room:join', `chat:${newConv.id}`);
             }
@@ -449,11 +483,38 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.error('Failed to create conversation with message', err);
-      } finally {
-        setIsLoading(false);
       }
     } else if (activeConversationId) {
-      // Message in existing conversation
+      // Existing conversation: Instant 0ms optimistic delivery
+      const tempMsgId = `opt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const optimisticMsg: ChatMessage = {
+        id: tempMsgId,
+        conversationId: activeConversationId,
+        senderId: user?.id || '',
+        content: trimmed,
+        isEdited: false,
+        isDeleted: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        sender: user || undefined,
+      };
+
+      // 1. Immediately append to active conversation (0ms)
+      setMessages((prev) => [...prev, optimisticMsg]);
+
+      // 2. Immediately update conversation in the left pane (0ms)
+      setConversations((prev) => {
+        const existing = prev.find((c) => c.id === activeConversationId);
+        if (!existing) return prev;
+        const updated: ConversationSummary = {
+          ...existing,
+          lastMessage: optimisticMsg,
+          updatedAt: optimisticMsg.createdAt,
+        };
+        return [updated, ...prev.filter((c) => c.id !== activeConversationId)];
+      });
+
+      // 3. Dispatch to server in background
       try {
         const res = await fetch(`/api/chat/conversations/${activeConversationId}/messages`, {
           method: 'POST',
@@ -461,31 +522,26 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content: content.trim() }),
+          body: JSON.stringify({ content: trimmed }),
         });
 
         if (res.ok) {
           const sentMessage: ChatMessage = await res.json();
-          setMessages((prev) => {
-            if (prev.some((m) => m.id === sentMessage.id)) return prev;
-            return [...prev, sentMessage];
-          });
-          setConversations((prev) => {
-            const existing = prev.find((c) => c.id === activeConversationId);
-            if (!existing) return prev;
-            const updated: ConversationSummary = {
-              ...existing,
-              lastMessage: sentMessage,
-              updatedAt: sentMessage.createdAt,
-            };
-            return [updated, ...prev.filter((c) => c.id !== activeConversationId)];
-          });
+          // Replace optimistic placeholder with confirmed server message
+          setMessages((prev) =>
+            prev.map((m) => (m.id === tempMsgId ? sentMessage : m))
+          );
+          setConversations((prev) =>
+            prev.map((c) =>
+              c.id === activeConversationId ? { ...c, lastMessage: sentMessage } : c
+            )
+          );
         }
       } catch (err) {
         console.error('Failed to send message', err);
       }
     }
-  }, [token, isDraft, selectedRecipients, draftTitle, activeConversationId, socket]);
+  }, [token, isDraft, selectedRecipients, draftTitle, activeConversationId, socket, user]);
 
   // Listen for real-time socket events
   useEffect(() => {
@@ -494,7 +550,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const handleMessage = (msg: ChatMessage) => {
       if (activeConvIdRef.current === msg.conversationId) {
         setMessages((prev) => {
+          // If already exists with server ID, ignore duplicate
           if (prev.some((m) => m.id === msg.id)) return prev;
+          // If we have an optimistic message matching this sender and content, reconcile it
+          const optIndex = prev.findIndex(
+            (m) =>
+              m.id.startsWith('opt-') &&
+              m.senderId === msg.senderId &&
+              m.content === msg.content
+          );
+          if (optIndex !== -1) {
+            const next = [...prev];
+            next[optIndex] = msg;
+            return next;
+          }
           return [...prev, msg];
         });
       }

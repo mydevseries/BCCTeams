@@ -64,8 +64,10 @@ Last Updated: 2026-11-05
 
 ## Active Work
 
+- **Current Step:** Completed and verified F-006 (Roles & Permissions) integration into AppShell and DirectoryView; proceeding to Core Chat (Phase 2) starting with C-001 (1:1 Direct Chat).
 - **Current Step:** Completed C-004; starting C-005 (Rich text formatting).
 - **Active Branch:** `master`
+- **Next Up:** Feature C-001: 1:1 Direct Chat on branch `feature/C-001`. Followed by C-002 through C-011.
 - **Next Up:** Feature C-005: Rich text formatting on branch `feature/C-005`.
 
 ---
