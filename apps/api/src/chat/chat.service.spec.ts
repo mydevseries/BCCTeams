@@ -55,8 +55,15 @@ describe('ChatService (C-001)', () => {
       },
       message: {
         findMany: jest.fn(),
+        findUnique: jest.fn(),
         create: jest.fn(),
         count: jest.fn(),
+      },
+      messageReaction: {
+        findUnique: jest.fn(),
+        findMany: jest.fn(),
+        create: jest.fn(),
+        delete: jest.fn(),
       },
       user: {
         findUnique: jest.fn(),
@@ -574,6 +581,119 @@ describe('ChatService (C-001)', () => {
       expect(prisma.conversationParticipant.update).toHaveBeenCalledWith(
         expect.objectContaining({
           data: { lastReadAt: new Date(0) },
+        }),
+      );
+    });
+  });
+
+  describe('toggleReaction (C-007)', () => {
+    it('throws BadRequestException if emoji is missing or empty', async () => {
+      await expect(service.toggleReaction('msg-1', 'user-1', '')).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.toggleReaction('msg-1', 'user-1', '   ')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('throws NotFoundException if message does not exist', async () => {
+      prisma.message.findUnique.mockResolvedValue(null);
+      await expect(service.toggleReaction('msg-nonexistent', 'user-1', '👍')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('throws ForbiddenException if user is not a participant in conversation', async () => {
+      prisma.message.findUnique.mockResolvedValue({
+        id: 'msg-1',
+        conversationId: 'conv-1',
+        conversation: {
+          participants: [{ userId: 'user-2' }],
+        },
+      });
+
+      await expect(service.toggleReaction('msg-1', 'user-1', '👍')).rejects.toThrow(
+        ForbiddenException,
+      );
+    });
+
+    it('adds a reaction if user has not reacted with this emoji yet', async () => {
+      prisma.message.findUnique.mockResolvedValue({
+        id: 'msg-1',
+        conversationId: 'conv-1',
+        conversation: {
+          participants: [{ userId: 'user-1' }, { userId: 'user-2' }],
+        },
+      });
+
+      prisma.messageReaction.findUnique.mockResolvedValue(null);
+      prisma.messageReaction.create.mockResolvedValue({
+        id: 'reaction-1',
+        messageId: 'msg-1',
+        userId: 'user-1',
+        emoji: '👍',
+      });
+
+      prisma.messageReaction.findMany.mockResolvedValue([
+        {
+          emoji: '👍',
+          user: { id: 'user-1', displayName: 'Alice User' },
+        },
+      ]);
+
+      const result = await service.toggleReaction('msg-1', 'user-1', '👍');
+
+      expect(result.success).toBe(true);
+      expect(result.action).toBe('added');
+      expect(result.emoji).toBe('👍');
+      expect(result.reactions).toEqual([
+        {
+          emoji: '👍',
+          count: 1,
+          users: [{ id: 'user-1', displayName: 'Alice User' }],
+          hasReacted: true,
+        },
+      ]);
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith(
+        'chat:conv-1',
+        'chat:reaction',
+        expect.objectContaining({
+          conversationId: 'conv-1',
+          messageId: 'msg-1',
+        }),
+      );
+    });
+
+    it('removes reaction if user has already reacted with this emoji', async () => {
+      prisma.message.findUnique.mockResolvedValue({
+        id: 'msg-1',
+        conversationId: 'conv-1',
+        conversation: {
+          participants: [{ userId: 'user-1' }, { userId: 'user-2' }],
+        },
+      });
+
+      prisma.messageReaction.findUnique.mockResolvedValue({
+        id: 'reaction-1',
+        messageId: 'msg-1',
+        userId: 'user-1',
+        emoji: '👍',
+      });
+      prisma.messageReaction.delete.mockResolvedValue({ id: 'reaction-1' });
+      prisma.messageReaction.findMany.mockResolvedValue([]);
+
+      const result = await service.toggleReaction('msg-1', 'user-1', '👍');
+
+      expect(result.success).toBe(true);
+      expect(result.action).toBe('removed');
+      expect(result.reactions).toEqual([]);
+      expect(eventsGateway.emitToRoom).toHaveBeenCalledWith(
+        'chat:conv-1',
+        'chat:reaction',
+        expect.objectContaining({
+          conversationId: 'conv-1',
+          messageId: 'msg-1',
+          reactions: [],
         }),
       );
     });

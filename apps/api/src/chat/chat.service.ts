@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { EventsGateway } from '../gateway/events.gateway';
 import { PresenceService } from '../presence/presence.service';
-import { ConversationSummary, ChatMessage, ChatParticipant } from '@bcc/shared';
+import { ConversationSummary, ChatMessage, ChatParticipant, MessageReactionSummary } from '@bcc/shared';
 
 @Injectable()
 export class ChatService {
@@ -932,6 +932,11 @@ export class ChatService {
             updatedAt: true,
           },
         },
+        reactions: {
+          include: {
+            user: { select: { id: true, displayName: true } },
+          },
+        },
       },
     });
 
@@ -955,7 +960,10 @@ export class ChatService {
       lastReadAt: readAt,
     });
 
-    return messages;
+    return messages.map((m: any) => ({
+      ...m,
+      reactions: this.formatReactions(m.reactions || [], userId),
+    }));
   }
 
   async sendMessage(conversationId: string, senderId: string, content: string): Promise<ChatMessage> {
@@ -1214,5 +1222,109 @@ export class ChatService {
     this.eventsGateway.emitToRoom(`user:${userId}`, 'chat:conversation_hidden', { conversationId });
 
     return { success: true };
+  }
+
+  /**
+   * Helper to format raw reactions grouped by emoji.
+   */
+  public formatReactions(
+    reactions: Array<{ emoji: string; user: { id: string; displayName: string } }>,
+    currentUserId?: string,
+  ): MessageReactionSummary[] {
+    if (!reactions || reactions.length === 0) return [];
+    const map = new Map<string, { count: number; users: Array<{ id: string; displayName: string }>; hasReacted: boolean }>();
+    for (const r of reactions) {
+      let entry = map.get(r.emoji);
+      if (!entry) {
+        entry = { count: 0, users: [], hasReacted: false };
+        map.set(r.emoji, entry);
+      }
+      entry.count += 1;
+      entry.users.push({ id: r.user.id, displayName: r.user.displayName });
+      if (currentUserId && r.user.id === currentUserId) {
+        entry.hasReacted = true;
+      }
+    }
+    return Array.from(map.entries()).map(([emoji, data]) => ({
+      emoji,
+      count: data.count,
+      users: data.users,
+      hasReacted: data.hasReacted,
+    }));
+  }
+
+  /**
+   * Toggle emoji reaction on a message.
+   */
+  async toggleReaction(messageId: string, userId: string, emoji: string) {
+    if (!emoji || !emoji.trim()) {
+      throw new BadRequestException('Emoji is required');
+    }
+    const cleanEmoji = emoji.trim();
+
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+      include: {
+        conversation: {
+          include: { participants: true },
+        },
+      },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    const isParticipant = message.conversation?.participants.some((p) => p.userId === userId);
+    if (!isParticipant) {
+      throw new ForbiddenException('You are not a participant in this conversation');
+    }
+
+    const existing = await this.prisma.messageReaction.findUnique({
+      where: {
+        messageId_userId_emoji: {
+          messageId,
+          userId,
+          emoji: cleanEmoji,
+        },
+      },
+    });
+
+    if (existing) {
+      await this.prisma.messageReaction.delete({
+        where: { id: existing.id },
+      });
+    } else {
+      await this.prisma.messageReaction.create({
+        data: {
+          messageId,
+          userId,
+          emoji: cleanEmoji,
+        },
+      });
+    }
+
+    const rawReactions = await this.prisma.messageReaction.findMany({
+      where: { messageId },
+      include: {
+        user: { select: { id: true, displayName: true } },
+      },
+    });
+
+    const reactionSummaries = this.formatReactions(rawReactions, userId);
+
+    // Broadcast to chat room
+    this.eventsGateway.emitToRoom(`chat:${message.conversationId}`, 'chat:reaction', {
+      conversationId: message.conversationId,
+      messageId,
+      reactions: reactionSummaries,
+    });
+
+    return {
+      success: true,
+      action: existing ? 'removed' : 'added',
+      emoji: cleanEmoji,
+      reactions: reactionSummaries,
+    };
   }
 }

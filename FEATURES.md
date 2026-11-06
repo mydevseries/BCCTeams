@@ -95,7 +95,7 @@ Feature IDs are used with /build-feature <id>.
 | C-004 | Send messages in real time; typing indicator; sent/read receipts | Built |
 | C-005 | Rich text: bold, italic, underline, strike, lists, quotes, code blocks, links, headings | Built |
 | C-006 | Emoji picker, GIFs, stickers | Built |
-| C-007 | Reactions on messages (like, heart, laugh, surprised, sad, angry + any emoji) | Todo |
+| C-007 | Reactions on messages (like, heart, laugh, surprised, sad, angry + any emoji) | Built |
 | C-008 | Reply to a specific message (quoted reply) | Todo |
 | C-009 | Edit and delete own messages (shows "edited"/"deleted") | Todo |
 | C-010 | @mentions of people with notifications | Todo |

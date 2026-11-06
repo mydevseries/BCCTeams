@@ -119,10 +119,27 @@ export interface SocketEvents {
     userId: string;
     lastReadAt: string | Date;
   };
+  'chat:reaction': {
+    conversationId: string;
+    messageId: string;
+    reactions: MessageReactionSummary[];
+  };
 }
 
 export type ConversationType = 'DIRECT' | 'GROUP';
 export type ParticipantRole = 'ADMIN' | 'MEMBER';
+
+export interface ReactionUser {
+  id: string;
+  displayName: string;
+}
+
+export interface MessageReactionSummary {
+  emoji: string;
+  count: number;
+  users: ReactionUser[];
+  hasReacted: boolean;
+}
 
 export interface ChatParticipant {
   id: string;
@@ -152,6 +169,7 @@ export interface ChatMessage {
   isSystem?: boolean;
   systemAction?: string | null;
   metadata?: any;
+  reactions?: MessageReactionSummary[];
   createdAt: Date | string;
   updatedAt: Date | string;
   sender?: UserProfile;
