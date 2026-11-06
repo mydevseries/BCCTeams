@@ -13,6 +13,7 @@ import {
   MessageBar,
   MessageBarBody,
   Spinner,
+  Checkbox,
 } from '@fluentui/react-components';
 import { MailRegular, LockClosedRegular } from '@fluentui/react-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -80,6 +81,7 @@ export const SignInView: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [authError, setAuthError] = useState('');
@@ -116,8 +118,9 @@ export const SignInView: React.FC = () => {
     setAuthError('');
 
     try {
-      await login(email.trim(), password);
-      const destination = (location.state as { from?: { pathname: string } })?.from?.pathname || '/chat';
+      await login(email.trim(), password, keepSignedIn);
+      const destination =
+        (location.state as { from?: { pathname: string } })?.from?.pathname || '/chat';
       navigate(destination, { replace: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Invalid email or password';
@@ -180,9 +183,13 @@ export const SignInView: React.FC = () => {
           </Field>
 
           <div className={styles.footerLinks}>
-            <Link onClick={() => navigate('/forgot-password')}>
-              Forgot password?
-            </Link>
+            <Checkbox
+              label="Keep me signed in"
+              checked={keepSignedIn}
+              onChange={(_, data) => setKeepSignedIn(!!data.checked)}
+              aria-label="Keep me signed in across browser restarts"
+            />
+            <Link onClick={() => navigate('/forgot-password')}>Forgot password?</Link>
           </div>
 
           <div className={styles.actions}>
@@ -200,9 +207,7 @@ export const SignInView: React.FC = () => {
         <div style={{ textAlign: 'center', marginTop: '8px' }}>
           <Caption1>
             Don't have an account?{' '}
-            <Link onClick={() => navigate('/signup')}>
-              Sign up
-            </Link>
+            <Link onClick={() => navigate('/signup')}>Sign up</Link>
           </Caption1>
         </div>
       </div>

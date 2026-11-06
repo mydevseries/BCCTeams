@@ -104,13 +104,15 @@ export class ChatController {
   async getMessages(
     @Req() req: Request,
     @Param('id') conversationId: string,
-    @Query('limit') limit?: number,
+    @Query('limit') limit?: string,
+    @Query('before') before?: string,
   ) {
     const user = req.user as { id: string };
     return this.chatService.getMessages(
       conversationId,
       user.id,
       limit ? Number(limit) : 50,
+      before,
     );
   }
 
@@ -121,7 +123,7 @@ export class ChatController {
     @Body() dto: SendMessageDto,
   ) {
     const user = req.user as { id: string };
-    return this.chatService.sendMessage(conversationId, user.id, dto.content);
+    return this.chatService.sendMessage(conversationId, user.id, dto.content, dto.replyToId);
   }
 
   @Post('conversations/:id/read')

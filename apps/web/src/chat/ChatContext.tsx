@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { ConversationSummary, ChatMessage, MemberProfile, HistoryShareOption } from '@bcc/shared';
+import { ConversationSummary, ChatMessage, MemberProfile, HistoryShareOption, MessageReactionSummary } from '@bcc/shared';
 import { useAuth } from '../auth/AuthContext';
 import { usePresence } from '../presence/PresenceContext';
 
@@ -13,6 +13,8 @@ interface ChatContextType {
   messages: ChatMessage[];
   isDraft: boolean;
   isLoading: boolean;
+  hasMoreMessages: boolean;
+  loadOlderMessages: () => Promise<void>;
   setActiveConversationId: (id: string | null) => void;
   startDraftChat: (recipient?: MemberProfile | null) => void;
   selectRecipient: (recipient: MemberProfile) => Promise<void>;
@@ -36,7 +38,7 @@ interface ChatContextType {
   toggleReaction: (messageId: string, emoji: string) => Promise<void>;
   typingUsers: Record<string, string>;
   sendTyping: (isTyping: boolean) => void;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, replyToId?: string) => Promise<void>;
   loadConversations: () => Promise<void>;
 }
 
@@ -53,8 +55,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isDraft, setIsDraft] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState<boolean>(false);
+  const nextCursorRef = useRef<string | null>(null);
   const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
   const typingTimersRef = useRef<Record<string, any>>({});
+
+  // In-memory message cache: conversationId → ChatMessage[]
+  const messageCacheRef = useRef<Map<string, ChatMessage[]>>(new Map());
 
   const activeConvIdRef = useRef<string | null>(null);
   activeConvIdRef.current = activeConversationId;
@@ -114,18 +121,55 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadMessages = useCallback(async (conversationId: string) => {
     if (!token) return;
     setIsLoading(true);
+
+    // Show cached messages instantly
+    const cached = messageCacheRef.current.get(conversationId);
+    if (cached && cached.length > 0) {
+      setMessages(cached);
+    }
+
     try {
-      const res = await fetch(`/api/chat/conversations/${conversationId}/messages`, {
+      const res = await fetch(`/api/chat/conversations/${conversationId}/messages?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data: ChatMessage[] = await res.json();
-        setMessages(data);
+        const data: { messages: ChatMessage[]; hasMore: boolean; nextCursor: string | null } =
+          await res.json();
+        setMessages(data.messages);
+        setHasMoreMessages(data.hasMore);
+        nextCursorRef.current = data.nextCursor;
+        messageCacheRef.current.set(conversationId, data.messages);
       }
     } catch (err) {
       console.error('Failed to load messages', err);
     } finally {
       setIsLoading(false);
+    }
+  }, [token]);
+
+  /** Load older messages (pagination — scroll-up to load more). */
+  const loadOlderMessages = useCallback(async () => {
+    if (!token || !activeConvIdRef.current || !nextCursorRef.current) return;
+    const conversationId = activeConvIdRef.current;
+    const before = nextCursorRef.current;
+
+    try {
+      const res = await fetch(
+        `/api/chat/conversations/${conversationId}/messages?limit=50&before=${before}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (res.ok) {
+        const data: { messages: ChatMessage[]; hasMore: boolean; nextCursor: string | null } =
+          await res.json();
+        setMessages((prev) => [...data.messages, ...prev]);
+        setHasMoreMessages(data.hasMore);
+        nextCursorRef.current = data.nextCursor;
+        // Update cache with prepended older messages
+        const existing = messageCacheRef.current.get(conversationId) || [];
+        messageCacheRef.current.set(conversationId, [...data.messages, ...existing]);
+      }
+    } catch (err) {
+      console.error('Failed to load older messages', err);
     }
   }, [token]);
 
@@ -487,7 +531,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 
   // Send message with instant optimistic updates (0ms perceived latency)
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, replyToId?: string) => {
     if (!token || !content.trim()) return;
     const trimmed = content.trim();
 
@@ -610,7 +654,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ content: trimmed }),
+          body: JSON.stringify({ content: trimmed, ...(replyToId ? { replyToId } : {}) }),
         });
 
         if (res.ok) {
@@ -788,6 +832,8 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         messages,
         isDraft,
         isLoading,
+        hasMoreMessages,
+        loadOlderMessages,
         setActiveConversationId,
         startDraftChat,
         selectRecipient,
@@ -825,6 +871,8 @@ const defaultChatContext: ChatContextType = {
   messages: [],
   isDraft: false,
   isLoading: false,
+  hasMoreMessages: false,
+  loadOlderMessages: async () => {},
   typingUsers: {},
   sendTyping: () => {},
   setActiveConversationId: () => {},

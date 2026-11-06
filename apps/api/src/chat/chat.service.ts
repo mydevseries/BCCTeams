@@ -895,7 +895,7 @@ export class ChatService {
     return { success: true };
   }
 
-  async getMessages(conversationId: string, userId: string, limit = 50) {
+  async getMessages(conversationId: string, userId: string, limit = 50, before?: string) {
     const participant = await this.prisma.conversationParticipant.findUnique({
       where: {
         conversationId_userId: {
@@ -909,14 +909,32 @@ export class ChatService {
       throw new ForbiddenException('You are not a participant in this conversation');
     }
 
-    const messages = await this.prisma.message.findMany({
-      where: {
-        conversationId,
-        createdAt: {
-          gte: participant.visibleFrom,
-        },
+    // Build cursor condition for pagination: get messages BEFORE a given message id
+    const whereClause: any = {
+      conversationId,
+      createdAt: {
+        gte: participant.visibleFrom,
       },
-      orderBy: { createdAt: 'asc' },
+    };
+
+    if (before) {
+      // Find the createdAt of the cursor message so we can paginate by time
+      const cursorMsg = await this.prisma.message.findUnique({
+        where: { id: before },
+        select: { createdAt: true },
+      });
+      if (cursorMsg) {
+        whereClause.createdAt = {
+          ...whereClause.createdAt,
+          lt: cursorMsg.createdAt,
+        };
+      }
+    }
+
+    // Fetch newest `limit` messages (descending), then reverse for display order
+    const messages = await this.prisma.message.findMany({
+      where: whereClause,
+      orderBy: { createdAt: 'desc' },
       take: limit,
       include: {
         sender: {
@@ -932,6 +950,14 @@ export class ChatService {
             updatedAt: true,
           },
         },
+        replyTo: {
+          select: {
+            id: true,
+            senderId: true,
+            content: true,
+            sender: { select: { displayName: true } },
+          },
+        },
         reactions: {
           include: {
             user: { select: { id: true, displayName: true } },
@@ -940,33 +966,46 @@ export class ChatService {
       },
     });
 
-    // Mark conversation read for this user
+    // Reverse to chronological order for the client
+    const chronological = messages.reverse();
+
+    // Mark conversation read for this user (fire-and-forget)
     const readAt = new Date();
-    await this.prisma.conversationParticipant.update({
-      where: {
-        conversationId_userId: {
+    void this.prisma.conversationParticipant
+      .update({
+        where: { conversationId_userId: { conversationId, userId } },
+        data: { lastReadAt: readAt },
+      })
+      .then(() => {
+        this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:read', {
           conversationId,
           userId,
-        },
-      },
-      data: {
-        lastReadAt: readAt,
-      },
-    });
+          lastReadAt: readAt,
+        });
+      });
 
-    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:read', {
-      conversationId,
-      userId,
-      lastReadAt: readAt,
-    });
+    const hasMore = messages.length === limit;
 
-    return messages.map((m: any) => ({
-      ...m,
-      reactions: this.formatReactions(m.reactions || [], userId),
-    }));
+    return {
+      messages: chronological.map((m: any) => ({
+        ...m,
+        replyTo: m.replyTo
+          ? {
+              id: m.replyTo.id,
+              senderId: m.replyTo.senderId,
+              senderDisplayName: m.replyTo.sender?.displayName,
+              content: m.replyTo.content,
+            }
+          : null,
+        reactions: this.formatReactions(m.reactions || [], userId),
+      })),
+      hasMore,
+      // Oldest message id for the next page cursor
+      nextCursor: hasMore && chronological.length > 0 ? chronological[0].id : null,
+    };
   }
 
-  async sendMessage(conversationId: string, senderId: string, content: string): Promise<ChatMessage> {
+  async sendMessage(conversationId: string, senderId: string, content: string, replyToId?: string): Promise<ChatMessage> {
     if (!content || content.trim().length === 0) {
       throw new BadRequestException('Message content cannot be empty');
     }
@@ -991,6 +1030,7 @@ export class ChatService {
           conversationId,
           senderId,
           content: content.trim(),
+          ...(replyToId ? { replyToId } : {}),
         },
         include: {
           sender: {
@@ -1004,6 +1044,14 @@ export class ChatService {
               role: true,
               createdAt: true,
               updatedAt: true,
+            },
+          },
+          replyTo: {
+            select: {
+              id: true,
+              senderId: true,
+              content: true,
+              sender: { select: { displayName: true } },
             },
           },
         },
@@ -1039,13 +1087,24 @@ export class ChatService {
     ]);
 
     // Broadcast message to chat room and to participant user rooms
-    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', message);
+    const broadcastMessage = {
+      ...message,
+      replyTo: message.replyTo
+        ? {
+            id: (message as any).replyTo.id,
+            senderId: (message as any).replyTo.senderId,
+            senderDisplayName: (message as any).replyTo.sender?.displayName,
+            content: (message as any).replyTo.content,
+          }
+        : null,
+    };
+    this.eventsGateway.emitToRoom(`chat:${conversationId}`, 'chat:message', broadcastMessage);
 
     for (const p of allParticipants) {
-      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', message);
+      this.eventsGateway.emitToRoom(`user:${p.userId}`, 'chat:message', broadcastMessage);
     }
 
-    return message as unknown as ChatMessage;
+    return broadcastMessage as unknown as ChatMessage;
   }
 
   async markAsRead(conversationId: string, userId: string) {
